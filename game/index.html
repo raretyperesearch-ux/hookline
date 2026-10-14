@@ -1998,6 +1998,9 @@
     for (const [n, x, z, s] of ISLANDS) { const R = isRadius[n] * s + 2.2, dx = nx - x, dz = nz - z, d = Math.hypot(dx, dz);
       if (d < R) { const ux = dx / d, uz = dz / d, vn = ME.vx * ux + ME.vz * uz; nx = x + ux * R; nz = z + uz * R;
         if (vn < 0) { ME.vx -= 1.6 * vn * ux; ME.vz -= 1.6 * vn * uz; ME.vx *= 0.55; ME.vz *= 0.55; if (vn < -3) { splash3(new THREE.Vector3(nx - ux * 2, 0, nz - uz * 2), 0.9); S.shake = Math.max(S.shake, 0.35); buzz(40); SFX.noise(0.2, 0.3, 500); } } } }
+    // boats bump each other instead of driving through
+    const others = peers.size ? [...peers.values()].map(e => [e.x, e.z]) : S.bots.map(b => [b.x, b.z]);
+    for (const [ox, oz] of others) { const dx = nx - ox, dz = nz - oz, d = Math.hypot(dx, dz), R = 4.2; if (d < R && d > 1e-3) { const ux = dx / d, uz = dz / d; nx = ox + ux * R; nz = oz + uz * R; const vn = ME.vx * ux + ME.vz * uz; if (vn < 0) { ME.vx -= 1.4 * vn * ux; ME.vz -= 1.4 * vn * uz; if (vn < -2.5) { splash3(new THREE.Vector3(ox + ux * 2, 0, oz + uz * 2), 0.6); buzz(30); SFX.tone(160, 0.12, 'triangle', 0.2, 90); } } } }
     if (Math.abs(nx) > WORLD) { ME.vx *= -0.4; } if (Math.abs(nz) > WORLD) { ME.vz *= -0.4; }
     ME.x = clamp(nx, -WORLD, WORLD); ME.z = clamp(nz, -WORLD, WORLD);
     if (wantBoost && Math.random() < dt * 30) emit(PS.glow, 1, () => ({ x: ME.x - fx * 2.3 + rand(-0.4, 0.4), y: 0.4, z: ME.z - fz * 2.3 + rand(-0.4, 0.4), vx: -fx * 4, vz: -fz * 4, vy: rand(0.5, 1.5), life: 0.5, kind: 1, s0: 0.6, s1: 0.1, r: 3, g: 2.4, b: 1 }));
