@@ -217,7 +217,7 @@
   .hold.down { transform: translateY(4px); box-shadow: 0 2px 0 #c99c14; background: #ffe470; }
   .hint { text-align: center; color: var(--mist); font-weight: 800; font-size: 11.5px; margin: 0; }
 
-  .tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; z-index: 8; background: #061a33; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr); }
+  .tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; z-index: 8; background: #061a33; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(6, 1fr); }
   .tab { background: none; border: 0; color: var(--mist); display: grid; justify-items: center; align-content: center; gap: 0; font-family: var(--display); font-size: 11.5px; letter-spacing: .3px; cursor: pointer; position: relative; }
   .tab img { width: 26px; height: 26px; object-fit: contain; filter: grayscale(.7) brightness(.8); transition: transform .2s; }
   .tab[aria-selected="true"] { color: var(--sunny); }
@@ -572,6 +572,22 @@
   .tag.say { animation: none; z-index: 3; }
   .tag.say.flip > span { left: calc(-50% - 26px); }
   .tag.say.flip > span::after { left: auto; right: -8px; border-right: 0; border-left: 8px solid #fff; border-top-color: transparent; }
+  .treasury { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: center; background: linear-gradient(135deg, #123f6b, #0b2a4a); border: 2px solid #ffd23f55; border-radius: 16px; padding: 12px 14px; margin: 4px 0 14px; }
+  .treasury .ic { grid-row: span 3; font-size: 34px; }
+  .treasury b { font-family: var(--display); font-size: 18px; color: #ffd23f; }
+  .treasury small { color: #b9d6ee; font-size: 12px; line-height: 1.35; }
+  .treasury .bar { height: 8px; border-radius: 8px; background: #06213b; overflow: hidden; } .treasury .bar i { display: block; height: 100%; background: linear-gradient(90deg, #3ddc97, #ffd23f); }
+  .mk-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .mk-h h3 { margin: 8px 0; }
+  .mk-list { display: grid; gap: 8px; margin-bottom: 14px; }
+  .mk-item { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; background: #0e3559; border: 2px solid #1d5585; border-radius: 14px; padding: 8px 10px; }
+  .mk-item button img { width: 16px; height: 16px; vertical-align: -3px; margin: 0 2px; }
+  .mk-item > img, .mk-item .bi { width: 52px; height: 52px; object-fit: contain; display: grid; place-items: center; font-size: 34px; }
+  .mk-item .nm { font-family: var(--display); font-size: 15px; } .mk-item .meta { font-size: 12px; color: #b9d6ee; line-height: 1.35; }
+  .mk-item .tier { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 8px; background: #06213b; margin-left: 4px; }
+  .mk-item .acts { display: grid; gap: 5px; justify-items: stretch; min-width: 78px; }
+  .mk-item button { white-space: nowrap; } .mk-item.on { border-color: #ffd23f; box-shadow: 0 0 0 2px #ffd23f44 inset; }
+  .mk-empty, .mk-soon { background: #0a2c4b; border: 2px dashed #1d5585; border-radius: 14px; padding: 14px; color: #b9d6ee; font-size: 13px; display: grid; gap: 4px; }
+  .mk-soon b { color: #fff; }
   .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
@@ -698,6 +714,19 @@
       <div class="dex" id="dex"></div>
     </section>
 
+    <section class="screen" id="s-market" hidden aria-label="Market">
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
+      <h2>Harbor Market</h2>
+      <p class="sub">Every green fish you pull in lands in your cooler. Sell it to the Harbor for AX, or turn it into bait.</p>
+      <div class="treasury" id="mk-treasury"></div>
+      <div class="mk-h"><h3>Your cooler</h3><button class="optbtn" id="mk-sellall" type="button">Sell all</button></div>
+      <div id="mk-cooler" class="mk-list"></div>
+      <h3>Bait Shack</h3>
+      <p class="sub">Craft bait from your catch, or buy it from Old Pete. Bait goes on your next cast.</p>
+      <div id="mk-baits" class="mk-list"></div>
+      <h3>Player market</h3>
+      <div class="mk-soon">🛶 <b>Trade bait with other anglers</b><span>List the bait you craft and set your own AX price. Opens once accounts sync to the server.</span></div>
+    </section>
     <section class="screen" id="s-quests" hidden aria-label="Quests">
       <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h2>Today's quests</h2>
@@ -837,6 +866,7 @@
       <button class="tab" role="tab" data-tab="lake" aria-selected="true"><img src="art/bobber.webp" alt="">Fish</button>
       <button class="tab" role="tab" data-tab="chest" aria-selected="false"><img src="art/chest2.webp" alt="" id="tab-chest">Chest<span class="dot" id="chest-dot" hidden>0</span></button>
       <button class="tab" role="tab" data-tab="gear" aria-selected="false"><img src="art/lures.webp" alt="">Gear</button>
+      <button class="tab" role="tab" data-tab="market" aria-selected="false"><img src="art/coin.webp" alt="">Market<span class="dot" id="mk-dot" hidden>!</span></button>
       <button class="tab" role="tab" data-tab="dex" aria-selected="false"><img src="art/book.webp" alt="">Fishdex</button>
       <button class="tab" role="tab" data-tab="quests" aria-selected="false"><img src="art/trophy.webp" alt="">Quests<span class="dot" id="q-dot" hidden>!</span></button>
     </nav>
@@ -1161,6 +1191,20 @@
     { id: 'boat_speed', art: 'b2_speed', name: 'Speedboat', price: 600, lvl: 2, speed: 15, turn: 3.5, grip: 1.3, slots: 0, desc: 'First to every hot zone. Red fish yank it around.' },
     { id: 'boat_trawler', art: 'b2_trawler', name: 'Trawler', price: 1500, lvl: 3, speed: 8, turn: 2.0, grip: 0.4, slots: 2, desc: 'Holds 2 extra fish. Barely moves when one turns red.' },
   ];
+  // ---- the catch economy ----
+  // Green fish you pull in go in your cooler; cut losers leave scraps. Sell fish to the Harbor Treasury for AX
+  // (in production the treasury is topped up from HookLine's trading fees), or craft them into bait.
+  // Bait never touches the trade itself: it changes bites, shinies, XP and what the fish sells for.
+  const BAITS = [
+    { id: 'worm', name: 'Lucky Worm', icon: '🪱', desc: 'The fish it catches sells for +50% AX.', recipe: { scraps: 3 }, price: 40 },
+    { id: 'chum', name: 'Chum Bucket', icon: '🪣', desc: 'Quick bites, no fake-outs, a longer strike window.', recipe: { fish: 1, scraps: 1 }, price: 60 },
+    { id: 'glitter', name: 'Glitter Bait', icon: '✨', desc: 'Much better odds of a shiny.', recipe: { fish: 2 }, price: 90 },
+    { id: 'grub', name: 'Golden Grub', icon: '🐛', desc: 'Double XP, and the fish sells for double.', recipe: { fish: 3 }, price: 160 },
+  ];
+  const DAILY_BUYBACK = 600, COOLER_MAX = 40;
+  const TIERS = [{ n: 'Common', m: 1, c: '#9ad8ee' }, { n: 'Uncommon', m: 1.5, c: '#3ddc97' }, { n: 'Rare', m: 2.2, c: '#5fb4ff' }, { n: 'Legendary', m: 3.5, c: '#ffd23f' }];
+  const RARITY = {}; MK_IDS.slice().sort((a, b) => MARKETS[b].w - MARKETS[a].w).forEach((m, i, a) => { const q = i / a.length; RARITY[m] = q < 0.35 ? 0 : q < 0.7 ? 1 : q < 0.92 ? 2 : 3; });
+  const fishValue = f => Math.round((10 + Math.max(0, f.usd || 0) * 4 + Math.max(0, f.pct) * 40) * TIERS[RARITY[f.mk] ?? 0].m * (f.shiny ? 3 : 1) * (f.bait === 'worm' ? 1.5 : f.bait === 'grub' ? 2 : 1));
   const COATS = ['#2f6fc0', '#e8443a', '#2fae6a', '#8a4fd8', '#f29a1a', '#1d2b3a'];
   const LURE_PRICE = 300, SHARPEN_PRICE = 25;
 
@@ -1201,7 +1245,8 @@
   const net = () => NETS.find(n => n.id === SAVE.eq.net);
   const chest = () => CHESTS.find(c => c.id === SAVE.eq.chest);
   if (!SAVE.eq.boat) { SAVE.eq.boat = 'boat'; SAVE.owned.boat = 1; }
-  if (SAVE.tut === undefined) SAVE.tut = 0;   // everyone gets the guided first catch once
+  if (SAVE.tut === undefined) SAVE.tut = 0;
+  SAVE.cooler = SAVE.cooler || []; SAVE.scraps = SAVE.scraps || 0; SAVE.baits = SAVE.baits || {}; if (SAVE.baitEq === undefined) SAVE.baitEq = null; SAVE.sold = SAVE.sold || { day: '', ax: 0 };   // everyone gets the guided first catch once
   SAVE.tips = true;                            // the objective tracker replaced the old tip cards
   const boat = () => BOATS.find(b => b.id === SAVE.eq.boat) || BOATS[0];
   const realMode = () => !!(SAVE.real && venue.broker && venue.broker.ok && (venue.isLive || venue.broker.demo));
@@ -1857,9 +1902,11 @@
   // objective tracker: the guided first catch, then frenzy and collection goals
   const TUT = [
     { t: 'Drive to Practice Cove (paper money)', zone: 'pond' },
-    { t: 'Stop, then HOLD cast and let go in the bright band' },
+    { t: 'Stop, HOLD cast, let go in the bright band, then tap STRIKE when it bites' },
     { t: 'Green: PULL IN past +2% · Red: CUT the line' },
     { t: 'Open the Fishdex to see what you caught' },
+    { t: 'Open the Market: sell your catch or make bait' },
+    { t: 'Open Gear: a bigger rod means bigger fish' },
   ];
   function objective() {
     const step = SAVE.tut ?? 9;
@@ -2282,6 +2329,8 @@
     let spec;
     if (S.target && SAVE.sonar >= 1 && S.target.zone === zn) spec = { ...S.target.spec };
     else { const pool = realMode() && !zn.practice ? zn.mk.filter(m => (!venue.broker.markets || venue.broker.markets.has(m)) && !S.positions.some(p => p.real && p.market === m)) : zn.mk; const mk = S.lure && pool.includes(S.lure) && Math.random() < 0.7 ? S.lure : weightedPick(pool.length ? pool : zn.mk); spec = { market: mk, side: Math.random() < 0.5 ? 1 : -1, shiny: Math.random() < (S.perfect ? 0.2 : 0.06) * (zn === S.frenzyZone ? 3 : 1) * (S.lucky ? 3 : 1) }; S.lucky = false; }
+    const bt0 = SAVE.baitEq && SAVE.baits[SAVE.baitEq] > 0 ? SAVE.baitEq : null;
+    if (bt0) { SAVE.baits[bt0]--; spec.bait = bt0; if (bt0 === 'glitter' && !spec.shiny && Math.random() < 0.22) spec.shiny = true; if (!SAVE.baits[bt0]) { SAVE.baitEq = null; toast(`Last ${BAITS.find(b => b.id === bt0).name} on the hook. Craft more in the Market.`); } persist(); }
     if (S.perfect) addXp(10); S.perfect = false;
     const dist = 4.5 + power * 10; S.castPower = power;
     const tx = S.target && S.target.zone === zn ? S.target.obj.position.x : ME.x + Math.cos(ME.h) * dist;
@@ -2370,7 +2419,7 @@
     if (practice) SAVE.paper -= SAVE.bait; else if (!real) SAVE.usd -= SAVE.bait;
     await venue.updateLeverage(spec.market, lev);
     let pos; try { pos = await venue.openPosition({ market: spec.market, side: spec.side, marginUsd: SAVE.bait, leverage: lev, practice, real }); } catch (e) { toast('Lighter said no: ' + e.message, 'warn'); if (!real) SAVE.usd += SAVE.bait; return null; }
-    const k = knife(), meta = { shiny: spec.shiny, knife: k.id, kind: k.kind, stop: knifeStopFor(), trail: SAVE.trail, halved: false, lake: zone ? zone.name : '' };
+    const k = knife(), meta = { bait: spec.bait || null, shiny: spec.shiny, knife: k.id, kind: k.kind, stop: knifeStopFor(), trail: SAVE.trail, halved: false, lake: zone ? zone.name : '' };
     S.meta[pos.id] = meta;
     if (pos.real) setTimeout(refreshRealBal, 300);
     await armKnife(pos, meta);
@@ -2424,6 +2473,7 @@
       say('cut', true); snip(m.knife || 'knife1'); S.lastEv = { k: 'cut', mk: p.market, t: Date.now() };
       if (res.reason === 'stop' && SAVE.charges[m.knife] !== Infinity && SAVE.charges[m.knife] > 0) SAVE.charges[m.knife]--;
       if (pct > -0.2 && pct < 0) quest('cut', 1);
+      if (!p.practice && res.fraction >= 1) { SAVE.scraps++; setTimeout(() => toast('+1 scrap for the Bait Shack. 3 scraps make a Lucky Worm.'), 1200); }
       if (res.fraction < 1) { m.halved = true; m.stop -= 0.15; const live = venue.positions.get(p.id); if (live) armKnife(live, m); }
       pop(mk.fish, res.fraction < 1 ? 'Half the line cut' : 'Line cut', `${p.market} ${fmtSigned(res.pnl)} (${fmtPct(pct)}) · ${fmtUSD(res.returned)} back`, 'lose');
       addXp(pct > -0.2 ? 15 : 5);
@@ -2436,7 +2486,12 @@
       S.lastEv = { k: win ? 'win' : 'rel', mk: p.market, pnl: +res.pnl.toFixed(2), t: Date.now() };
       const title = res.reason === 'take-profit' ? 'NETTED!' : res.reason === 'pulled' ? 'Pulled in!' : win ? 'Released a winner' : 'Released';
       pop(mk.fish, title, `${p.market} ${fmtSigned(res.pnl)} (${fmtPct(pct)}) · ${fmtUSD(res.returned)} back`, win ? 'win' : 'lose');
-      addXp(win ? 20 + Math.round(Math.min(pct, 3) * 40) : 5);
+      addXp((win ? 20 + Math.round(Math.min(pct, 3) * 40) : 5) * (win && m.bait === 'grub' ? 2 : 1));
+      if (win && !p.practice) {
+        const notional = p.margin * res.fraction * p.leverage, item = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), mk: p.market, side: p.side, lev: p.leverage, pct, usd: +res.pnl.toFixed(2), kg: +(notional / 10 * (1 + Math.min(pct, 3))).toFixed(1), shiny: !!m.shiny, bait: m.bait || null, real: !!p.real, t: Date.now() };
+        SAVE.cooler.unshift(item); if (SAVE.cooler.length > COOLER_MAX) SAVE.cooler.length = COOLER_MAX;
+        setTimeout(() => toast(`${mk.name} (${item.kg} kg) is in your cooler · worth ${fishValue(item)} AX at the Market`, 'good'), 1800); $('#mk-dot').hidden = false;
+      }
       if (win && (!SAVE.best || pct > SAVE.best.pct)) SAVE.best = { mk: p.market, pct };
       if (win) { SAVE.trophies = [...(SAVE.trophies || []), { mk: p.market, pct, t: Date.now() }].sort((a, b) => b.pct - a.pct).slice(0, 5); }
       const d = SAVE.dex[p.market]; if (d && pct > d.best) d.best = pct;
@@ -3117,10 +3172,11 @@
     cb.disabled = (casting && !waiting) || (!casting && !!why && !!S.zone && why !== 'Not enough on Lighter');
     cb.classList.toggle('strike', !!(waiting && S.bite.phase === 'strike')); cb.classList.toggle('waiting', !!(waiting && S.bite.phase !== 'strike'));
     cb.classList.toggle('sailto', !S.zone && !casting);
-    $('#cast-note').textContent = full ? `All ${cap} lines are out. Pull one in, cut one, or get a bigger chest in Gear.`
+    const onHook = SAVE.baitEq && SAVE.baits[SAVE.baitEq] > 0 ? BAITS.find(b => b.id === SAVE.baitEq) : null;
+    $('#cast-note').textContent = (onHook && !full && S.zone ? `${onHook.icon} ${onHook.name} on the hook · ` : '') + (full ? `All ${cap} lines are out. Pull one in, cut one, or get a bigger chest in Gear.`
       : !S.zone ? 'Drive into a glowing zone. Each one holds different markets; Open Water has them all.'
       : S.target ? `Aiming at ${S.target.spec.market}${SAVE.sonar >= 2 ? (S.target.spec.side > 0 ? ' long' : ' short') : ''} · ${lev}× · ${fmtUSD(SAVE.bait, 0)} bait`
-      : `${S.zone.name}: random ${S.zone.flag.toLowerCase()} fish · ${lev}× · ${fmtUSD(SAVE.bait, 0)} bait${S.zone.practice ? ' (paper)' : ''}${SAVE.sonar ? ' · tap a fish to aim' : ''}`;
+      : `${S.zone.name}: random ${S.zone.flag.toLowerCase()} fish · ${lev}× · ${fmtUSD(SAVE.bait, 0)} bait${S.zone.practice ? ' (paper)' : ''}${SAVE.sonar ? ' · tap a fish to aim' : ''}`);
     $('#castmore').disabled = full || S.mode !== 'fight';
     const p = activePos();
     if (p) {
@@ -3408,12 +3464,51 @@
     $('#lake-list').innerHTML = LAKES.map((l, i) => `<button class="lake-card ${l === S.lake ? 'on' : ''}" type="button" data-lake="${i}" style="background-image:url(art/${l.bg}.webp)"><span class="mood ${l.cls}">${l.mood}</span><h4>${l.name}${l === S.lake ? ' · here' : ''}</h4><div class="mks">${l.mk.slice(0, 4).map(m => `<span>${img(MARKETS[m].fish)}${m}</span>`).join('')}${l.mk.length > 4 ? `<span style="padding-left:8px">+${l.mk.length - 4}</span>` : ''}</div></button>`).join('');
   }
   function renderAll() { renderHud(); renderLoadout(); renderLive(); renderDex(); renderQuests(); if (S.tab === 'gear') renderGear(); if (S.tab === 'chest') renderTank(); if (S.tab === 'lakes') renderLakes(); }
+  const today = () => new Date().toISOString().slice(0, 10);
+  function buybackLeft() { if (SAVE.sold.day !== today()) SAVE.sold = { day: today(), ax: 0 }; return Math.max(0, DAILY_BUYBACK - SAVE.sold.ax); }
+  function canCraft(b) { const r = b.recipe; return (SAVE.scraps >= (r.scraps || 0)) && (SAVE.cooler.length >= (r.fish || 0)); }
+  function recipeText(r) { return [r.fish ? `${r.fish} fish` : '', r.scraps ? `${r.scraps} scrap${r.scraps > 1 ? 's' : ''}` : ''].filter(Boolean).join(' + '); }
+  function renderMarket() {
+    $('#mk-dot').hidden = true;
+    const left = buybackLeft(), pool = (window.HOOKLINE_CONFIG && +window.HOOKLINE_CONFIG.treasuryAx) || 48210;
+    $('#mk-treasury').innerHTML = `<span class="ic">⚓</span><b>Harbor Treasury · ${pool.toLocaleString('en-US')} AX</b>
+      <small>Topped up by HookLine trading fees. It buys your fish every day, so a good catch pays twice: the trade, then the fish.</small>
+      <div><div class="bar"><i style="width:${left / DAILY_BUYBACK * 100}%"></i></div><small>Your buyback today: ${left} of ${DAILY_BUYBACK} AX left · resets at midnight UTC</small></div>`;
+    const c = SAVE.cooler;
+    $('#mk-sellall').hidden = !c.length;
+    $('#mk-cooler').innerHTML = c.length ? c.map(f => { const mk = MARKETS[f.mk], tier = TIERS[RARITY[f.mk] ?? 0], v = fishValue(f);
+      return `<div class="mk-item"><img src="art/${mk ? mk.fish : 'f_tuna'}.webp" alt=""><div><div class="nm">${f.shiny ? '✦ ' : ''}${esc(mk ? mk.name : f.mk)}<span class="tier" style="color:${tier.c}">${tier.n}</span></div>
+        <div class="meta">${f.kg} kg · ${esc(f.mk)} ${f.side > 0 ? 'long' : 'short'} ${f.lev}× · ${fmtPct(f.pct)}${f.bait ? ` · ${BAITS.find(b => b.id === f.bait).icon}` : ''}</div></div>
+        <div class="acts"><button class="optbtn" type="button" data-sell="${f.id}" ${v > left ? 'disabled' : ''}>Sell ${img('coin')} ${v}</button></div></div>`; }).join('')
+      : `<div class="mk-empty"><b>Your cooler is empty.</b><span>Pull in a green fish and it lands here. Cut lines leave scraps: you have ${SAVE.scraps}.</span></div>`;
+    $('#mk-baits').innerHTML = `<div class="meta" style="font-size:12px;color:#b9d6ee">Scraps: <b>${SAVE.scraps}</b> · Fish in cooler: <b>${c.length}</b></div>` + BAITS.map(b => { const n = SAVE.baits[b.id] || 0, on = SAVE.baitEq === b.id;
+      return `<div class="mk-item ${on ? 'on' : ''}"><span class="bi">${b.icon}</span><div><div class="nm">${b.name} <span class="tier">×${n}</span></div><div class="meta">${b.desc}<br>Craft: ${recipeText(b.recipe)}</div></div>
+        <div class="acts"><button class="optbtn" type="button" data-craft="${b.id}" ${canCraft(b) ? '' : 'disabled'}>Craft</button><button class="optbtn" type="button" data-buybait="${b.id}" ${SAVE.ax < b.price ? 'disabled' : ''}>${img('coin')} ${b.price}</button>
+        ${n ? `<button class="optbtn" type="button" data-usebait="${b.id}">${on ? 'On hook ✓' : 'Use'}</button>` : ''}</div></div>`; }).join('');
+  }
+  function sellFish(id) {
+    const i = SAVE.cooler.findIndex(f => f.id === id); if (i < 0) return 0; const f = SAVE.cooler[i], v = fishValue(f);
+    if (v > buybackLeft()) { toast('The Harbor has spent today\'s buyback on you. Craft bait instead, or sell tomorrow.', 'warn'); return 0; }
+    SAVE.cooler.splice(i, 1); SAVE.ax += v; SAVE.sold.ax += v; return v;
+  }
+  $('#s-market').addEventListener('click', e => {
+    const t = e.target.closest('button'); if (!t) return;
+    if (t.dataset.sell) { const v = sellFish(t.dataset.sell); if (v) { SFX.coin(); toast(`Sold for ${v} AX`, 'good'); } }
+    else if (t.id === 'mk-sellall') { let tot = 0; for (const f of SAVE.cooler.slice().sort((a, b) => fishValue(b) - fishValue(a))) { if (fishValue(f) > buybackLeft()) continue; tot += sellFish(f.id); } if (tot) { SFX.coin(); toast(`Sold your catch for ${tot} AX`, 'good'); } }
+    else if (t.dataset.craft) { const b = BAITS.find(x => x.id === t.dataset.craft); if (!canCraft(b)) return;
+      SAVE.scraps -= b.recipe.scraps || 0; if (b.recipe.fish) { SAVE.cooler.sort((x, y) => fishValue(y) - fishValue(x)); SAVE.cooler.splice(SAVE.cooler.length - b.recipe.fish, b.recipe.fish); }   // the cheapest fish go in the pot
+      SAVE.baits[b.id] = (SAVE.baits[b.id] || 0) + 1; if (!SAVE.baitEq) SAVE.baitEq = b.id; SFX.tone(784, 0.1, 'triangle', 0.2); SFX.tone(1175, 0.16, 'triangle', 0.2, null, 0.1); toast(`Crafted ${b.icon} ${b.name}`, 'good'); }
+    else if (t.dataset.buybait) { const b = BAITS.find(x => x.id === t.dataset.buybait); if (SAVE.ax < b.price) return; SAVE.ax -= b.price; SAVE.baits[b.id] = (SAVE.baits[b.id] || 0) + 1; if (!SAVE.baitEq) SAVE.baitEq = b.id; SFX.coin(); toast(`Bought ${b.icon} ${b.name}`, 'good'); }
+    else if (t.dataset.usebait) { SAVE.baitEq = SAVE.baitEq === t.dataset.usebait ? null : t.dataset.usebait; }
+    else return;
+    persist(); renderAll(); renderMarket();
+  });
   function setTab(tab) {
     S.tab = tab;
     $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab || (tab === 'lakes' && b.dataset.tab === 'lake'))));
-    for (const id of ['chest', 'gear', 'dex', 'quests', 'lakes']) $('#s-' + id).hidden = tab !== id;
-    if (tab === 'dex') tutAdvance(4);
-    if (tab === 'chest') renderTank(); if (tab === 'gear') { renderGear(); renderLighterCard(); } if (tab === 'dex') renderDex(); if (tab === 'quests') renderQuests(); if (tab === 'lakes') renderLakes();
+    for (const id of ['chest', 'gear', 'market', 'dex', 'quests', 'lakes']) $('#s-' + id).hidden = tab !== id;
+    if (tab === 'dex' && SAVE.tut === 3) tutAdvance(4); if (tab === 'market' && SAVE.tut === 4) tutAdvance(5); if (tab === 'gear' && SAVE.tut === 5) tutAdvance(6);
+    if (tab === 'chest') renderTank(); if (tab === 'gear') { renderGear(); renderLighterCard(); } if (tab === 'dex') renderDex(); if (tab === 'quests') renderQuests(); if (tab === 'market') renderMarket(); if (tab === 'lakes') renderLakes();
     if (tab !== 'lake') $('#tip').hidden = true;
   }
   function switchLake(i) {
