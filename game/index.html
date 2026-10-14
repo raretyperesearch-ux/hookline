@@ -962,7 +962,7 @@
     }
     _apply(id, sym, px, chgPct) {
       const m = id != null && this.byId[id] ? this.byId[id] : (MARKETS[sym] ? sym : null);
-      if (!m || !(px > 0)) return;
+      if (!m || !(px > 0) || (this.v.relayPriced && this.v.relayPriced.has(m))) return;   // real fills price off the relay's own network
       this.v.setLive(m, px, chgPct != null && isFinite(chgPct) ? chgPct / 100 : null); this.lastAt = Date.now(); this.state = 'live';
     }
     async _poll() {
@@ -2773,6 +2773,11 @@
     } catch (e) { venue.broker = null; st.textContent = 'Could not reach the relay: ' + e.message; }
     renderLighterCard(); renderHud();
   }
+  // with real fills on, the markets the relay trades are priced from the relay's network (testnet ≠ mainnet)
+  setInterval(async () => {
+    if (!realMode()) { venue.relayPriced = null; return; }
+    try { const px = await venue.broker.call('/v1/prices'); venue.relayPriced = new Set(Object.keys(px).filter(m => MARKETS[m] && +px[m] > 0)); for (const m of venue.relayPriced) venue.setLive(m, +px[m]); } catch (_) { }
+  }, 2000);
   function renderTape() {
     const mks = S.zone ? S.zone.mk : MK_IDS, m = mks[tapeI % mks.length]; tapeI++;
     const ch = venue.change[m] || 0;
@@ -3093,7 +3098,8 @@
   $('#sound').addEventListener('click', e => { SFX.on = !SFX.on; if (SFX.on) SFX.init(); e.currentTarget.setAttribute('aria-pressed', String(SFX.on)); e.currentTarget.setAttribute('aria-label', SFX.on ? 'Sound on' : 'Sound off'); $('#snd-wave').style.display = SFX.on ? '' : 'none'; });
   $('#tip-next').addEventListener('click', () => { tipIdx++; if (tipIdx >= TIPS.length) { SAVE.tips = true; persist(); } showTip(); });
   $$('.tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
-  { const c = lcLoad(); if (c.url) { $('#lc-url').value = c.url; $('#lc-token').value = c.token || ''; setTimeout(testRelay, 1500); } }
+  const DEFAULT_RELAY = window.HOOKLINE_RELAY || (location.host === 'hookline-production-1a40.up.railway.app' ? 'https://relay-production-ef74.up.railway.app' : '');
+  { const c = lcLoad(); if (c.url) { $('#lc-url').value = c.url; $('#lc-token').value = c.token || ''; setTimeout(testRelay, 1500); } else if (DEFAULT_RELAY) $('#lc-url').value = DEFAULT_RELAY; }
   $('#lc-test').addEventListener('click', testRelay);
   $('#lc-real').addEventListener('change', e => { SAVE.real = e.target.checked && !!(venue.broker && venue.broker.ok); if (SAVE.real) toast('Real fills ON: new casts open real Lighter positions within your relay limits.', 'warn'); persist(); renderLighterCard(); renderHud(); });
   $('#sail-nick').addEventListener('input', e => { const v = e.target.value.replace(/[<>]/g, '').trim().slice(0, 16); if (v) { SAVE.nick = v; ME.nick = v; persist(); } });

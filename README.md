@@ -52,3 +52,15 @@ Everyone shares the same 5-minute rounds and Frenzy zone (both are derived from 
 3. Every catch fills the Fishdex (213 species), scores the current round and progresses daily quests.
 4. Quests pay AX; AX buys rods, knives, nets, sonar, chests and boats.
 5. Every 5 minutes: podium, XP, crown for the winner. Mid-round, one zone goes into Frenzy.
+
+## Live deployment (Railway project "hookline")
+
+| Service | URL | Notes |
+| --- | --- | --- |
+| `hookline` (game + multiplayer) | https://hookline-production-1a40.up.railway.app | redeploys on pushes touching `game/`, `server/`, `package.json` |
+| `relay` (Lighter signer) | https://relay-production-ef74.up.railway.app | root `relay/`, **testnet**, limits $25 margin / 10x / BTC,ETH,SOL, CORS locked to the game |
+
+To turn on real (testnet) fills, add these variables to the **relay** service in the Railway dashboard (never commit them):
+`LIGHTER_ACCOUNT_INDEX`, `LIGHTER_API_PRIVATE_KEY` (and `LIGHTER_API_KEY_INDEX` if not 3), `HOOKLINE_RELAY_TOKEN` (any long random string).
+Then in the game: Gear → Lighter connection → paste the token → Test relay → Real fills.
+In real mode the relay's markets are priced from the relay's own network (`/v1/prices`), so testnet PnL is honest.

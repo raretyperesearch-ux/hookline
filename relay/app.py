@@ -151,7 +151,26 @@ async def health():
 
 @app.get("/v1/markets")
 async def get_markets():
-    return await markets()
+    ms = await markets()
+    return {k: v for k, v in ms.items() if not ALLOWED_MARKETS or k in ALLOWED_MARKETS}
+
+
+_prices: dict = {}
+_prices_at = 0.0
+
+
+@app.get("/v1/prices")
+async def get_prices():
+    """Mark prices on the relay's own network (testnet prices differ from mainnet), cached 1.5s."""
+    global _prices, _prices_at
+    if time.time() - _prices_at > 1.5:
+        r = await _http.get("/api/v1/orderBookDetails")
+        r.raise_for_status()
+        _prices = {o["symbol"]: float(o.get("mark_price") or o.get("last_trade_price") or 0) for o in r.json().get("order_book_details", [])
+                   if o.get("market_type") == "perp" and (not ALLOWED_MARKETS or o["symbol"] in ALLOWED_MARKETS)}
+        _prices = {k: v for k, v in _prices.items() if v > 0}
+        _prices_at = time.time()
+    return _prices
 
 
 @app.get("/v1/positions", dependencies=[Depends(auth)])
