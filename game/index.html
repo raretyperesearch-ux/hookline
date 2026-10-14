@@ -2770,7 +2770,7 @@
     try { const info = await br.check(); venue.broker = br; try { br.markets = new Set(Object.keys(await br.call('/v1/markets'))); } catch (_) { br.markets = null; }
       st.textContent = info.configured ? `Connected · ${String(info.lighter).includes('testnet') ? 'TESTNET' : 'MAINNET'} account ${info.account} · max $${info.limits.max_margin_usd} × ${info.limits.max_leverage}` : 'Relay reachable but missing its Lighter key or token.';
       if (!venue.isLive) st.textContent += ' · live prices are not reachable from this page, so real fills stay off.';
-    } catch (e) { venue.broker = null; st.textContent = 'Could not reach the relay: ' + e.message; }
+    } catch (e) { venue.broker = null; st.textContent = /not configured|no HOOKLINE_RELAY_TOKEN|API key/.test(e.message) ? `Relay is up (testnet), but its Lighter key and token aren't set yet. Add them to the relay service in Railway, then paste the token here.` : /bad token/.test(e.message) ? 'Relay is up, but that token is wrong.' : 'Could not reach the relay: ' + e.message; }
     renderLighterCard(); renderHud();
   }
   // with real fills on, the markets the relay trades are priced from the relay's network (testnet ≠ mainnet)
