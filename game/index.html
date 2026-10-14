@@ -567,8 +567,8 @@
   .real-links { font-size: 12.5px; font-weight: 800; } .real-links a { color: var(--mist); }
   #h-wallet.realchip { border-color: rgba(61,220,151,.8); cursor: pointer; pointer-events: auto; } #h-wallet.realchip::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 6px #3ddc97; margin-right: 5px; }
   .tag.say { animation: none; z-index: 3; }
-  .tag.say > span { display: block; position: relative; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
-  .tag.say > span::after { content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #fff; }
+  .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
+  .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
   .xclose { position: sticky; top: 0; justify-self: end; z-index: 3; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--line); background: rgba(6,26,51,.9); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
   .overlay > .xclose { position: absolute; top: 12px; right: 14px; }
 </style>
@@ -1252,7 +1252,7 @@
     stage.appendChild(renderer.domElement);
     scene.background = new THREE.Color('#9ad8ee'); scene.fog = new THREE.Fog('#9ad8ee', 90, 210);
   }
-  function resize() { const r = stage.getBoundingClientRect(); W = r.width; H = r.height; if (!has3D || !W || !H) return; renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix(); try { resizePost(); } catch (_) { } }
+  function resize() { const r = stage.getBoundingClientRect(); W = r.width; H = r.height; if (!has3D || !W || !H) return; renderer.setSize(W, H, false); camera.aspect = W / H; if (W / H > 1.1) camera.setViewOffset(W, H, 0, Math.round(H * 0.11), W, H); else camera.clearViewOffset(); camera.updateProjectionMatrix(); /* wide screens: lift the boat above the fight panel */ try { resizePost(); } catch (_) { } }
   new ResizeObserver(resize).observe(phone); resize();
 
   const WORLD = 115;   // the map runs from -WORLD to +WORLD on x and z
@@ -1843,6 +1843,8 @@
     const xp = [100, 60, 40][meI] || (S.round.score !== 0 ? 15 : 0);
     $('#pd-you').textContent = `You finished #${meI + 1} of ${rows.length} with ${fmtPct(S.round.score)}${xp ? ` · +${xp} XP` : ''}${meI === 0 ? ' · you wear the crown next round' : ''}`;
     if (xp) addXp(xp); S.round.crown = meI === 0; if (meI < 3 && S.round.score > 0) quest('podium', 1);
+    if (S.mode === 'fight' || S.mode === 'kraken' || S.mode === 'pull') {   // never yank you out of a live fight: a banner instead of the podium
+      zoneBanner(meI === 0 ? 'You won the round! 👑' : `Round over · #${meI + 1} of ${rows.length}`, `${fmtPct(S.round.score)}${xp ? ` · +${xp} XP` : ''}`, meI === 0 ? '#ffd23f' : '#9ad8ee'); return; }
     $('#o-podium').hidden = false; SFX.level(); if (meI === 0) { confetti(ME.x, ME.z); rayBurst(new THREE.Vector3(ME.x, 3, ME.z), '#ffd23f', 2.2, 18); }
   }
   // objective tracker: the guided first catch, then frenzy and collection goals
@@ -2784,7 +2786,7 @@
       tag('me-warn', 'warn', `<span class="bangs">${'!'.repeat(n)}</span>${words ? `<span class="shout">${words}</span>` : ''}`, head);
     } else if (S.mode === 'fight' && f >= PULL_MIN) tag('me-warn', 'warn good', `<span class="shout good">${f > 0.3 ? 'Big one! Pull!' : 'Pull it in!'}</span>`, head);
     if (S.mode === 'fight' && p && S.fishObj) tag('me-fish', 'fishtag ' + (f >= 0 ? 'up' : 'down'), `${esc(MARKETS[p.market].name)} · ${esc(p.market)} ${p.side > 0 ? 'L' : 'S'} ${p.leverage}× · ${fmtPct(f)}`, S.fishObj.position.clone().setY(0.6));
-    if (S.bubble && (S.bubble.t += S.dt) < 2.8) tag('me-say', 'say', `<span>${esc(S.bubble.text)}</span>`, new THREE.Vector3(ME.x, 7.2, ME.z));
+    if (S.bubble && (S.bubble.t += S.dt) < 2.8) tag('me-say', 'say', `<span>${esc(S.bubble.text)}</span>`, new THREE.Vector3(ME.x, 4.4, ME.z));
     tag('me-name', 'name me', S.round.crown ? '👑 You' : 'You', new THREE.Vector3(ME.x, 3.6, ME.z));
     if ((S.mode === 'fight' && (f < -0.03 || f >= PULL_MIN)) || S.mode === 'kraken') tagEls.get('me-name').style.display = 'none';
     // sonar labels
