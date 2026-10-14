@@ -511,6 +511,36 @@
     .rays, .quest button, .slot.danger, .big-btn.cut.urgent, .big-btn.kelp.ready { animation: none; }
     .leap, .ribbon, .overlay h3, .overlay .meta, .overlay .actions, .levelup .star, .unlock, .kraken-ov img, .pop, .snip img, .snip b, .bigpnl { animation: none; }
   }
+
+  /* ---------- full-screen game: the world fills the window, controls stay a comfortable column ---------- */
+  html, body { height: 100%; overflow: hidden; }
+  .page { display: block !important; padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  .guide { display: none !important; }
+  .phone { position: fixed !important; inset: 0; width: 100vw !important; height: 100dvh !important; max-width: none; aspect-ratio: auto !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; min-height: 0 !important; }
+  @media (min-width: 760px) {
+    .sheet, .tabbar { left: 50% !important; right: auto !important; width: 470px; transform: translateX(-50%); }
+    .tabbar { border-radius: 18px 18px 0 0; border: 1px solid var(--line); }
+    .screen { left: 50% !important; right: auto !important; width: 520px; transform: translateX(-50%); top: 20px !important; border-radius: 22px 22px 0 0; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+    .sail .card { max-width: 420px; }
+    .hud { padding: 14px 18px 0; }
+    #minimap { width: 130px; height: 130px; }
+    .roundbox { width: 200px; }
+    .zone-banner b { font-size: 56px; }
+    .toast { max-width: 460px; left: 50% !important; right: auto !important; transform: translateX(-50%); }
+  }
+
+  /* while sailing the panel shrinks to the one button that matters; gear and bait slide in at a zone */
+  #phone:not(.inzone) #main .loadout, #phone:not(.inzone) #main .opt-row, #phone:not(.inzone) #main #cast-note { display: none; }
+  #main .loadout, #main .opt-row { animation: scr-in .3s both; }
+  @media (max-height: 760px) {
+    #minimap { width: 74px; height: 74px; top: 112px; }
+    .roundbox { top: 112px; width: 138px; padding: 4px 7px; } .roundbox li { font-size: 10.5px; } .roundbox .fz { font-size: 10px; }
+    .emotes { top: 220px; }
+    .drive-hint { display: none; }
+    .obj { top: 78px; font-size: 11.5px; }
+    .sheet { padding: 8px 10px; } .loadout .gearchip small { display: none; }
+  }
+  #cast.sail { background: linear-gradient(180deg, #3aa0e8, #1f6fb8); color: #fff; box-shadow: 0 5px 0 #154c80; font-size: 17px; }
 </style>
 
 <div class="page">
@@ -1744,7 +1774,8 @@
     if (step < TUT.length) { const o = TUT[step]; return { st: `${step + 1}/${TUT.length}`, t: o.t, zone: o.zone ? ZONES.find(z => z.id === o.zone) : null, color: '#ffd23f' }; }
     const fz = frenzyNow(); if (fz && S.zone !== fz) return { st: 'FRENZY', t: `Race to ${fz.name}: fast bites, 3× shiny`, zone: fz, color: '#ffd23f' };
     if (S.mode === 'fight') { const p = activePos(), f = p ? pnlFrac(p) : 0; return { st: 'FIGHT', t: f >= PULL_MIN ? 'It\'s green: pull it in, or hold for more' : f < -0.12 ? 'It\'s dragging you: cut it before the Kraken' : 'Watch it: past +2% you can pull it in', color: f >= PULL_MIN ? '#3ddc97' : f < 0 ? '#ff5c7a' : '#5fb4ff' }; }
-    if (!S.zone) { const seen = MK_IDS.filter(m => SAVE.dex[m]).length; return { st: `${seen}/${MK_IDS.length}`, t: 'Drive into a glowing zone to fish', zone: null, color: '#5fb4ff' }; }
+    if (!S.zone) { const seen = MK_IDS.filter(m => SAVE.dex[m]).length, g = S.goTo || null; return { st: `${seen}/${MK_IDS.length}`, t: g ? `Sail to ${g.name}` : 'Drive into a glowing zone to fish', zone: g, color: '#5fb4ff' }; }
+    if (S.goTo && S.zone === S.goTo) S.goTo = null;
     return { st: 'CAST', t: `Hold cast · ${S.zone.mk.filter(m => !SAVE.dex[m]).length} new species here`, color: '#3ddc97' };
   }
   function tutAdvance(to) { if ((SAVE.tut ?? 9) < to && (SAVE.tut ?? 9) < TUT.length) { SAVE.tut = to; persist(); const o = $('#obj'); o.classList.remove('done'); void o.offsetWidth; o.classList.add('done'); SFX.tone(988, 0.1, 'triangle', 0.2); SFX.tone(1318, 0.16, 'triangle', 0.2, null, 0.08); if (to === TUT.length) { addXp(50); toast('Tutorial done! +50 XP. Rounds run every 5 minutes: catch to climb the board.', 'good'); } } }
@@ -2366,6 +2397,7 @@
     if (zn !== S.zone) { S.zone = zn; if (zn) { S.lake = zn; zoneBanner(zn.name, `${zn.mk.length} kinds of fish · ${zn.flag}${zn.practice ? ' · paper money' : ''}`, zn.color); } renderAll(); }
     const ring = document.getElementById('boost-ring'); if (ring) ring.style.strokeDashoffset = String(226 * (1 - ME.boost));
   }
+  function nearestZone() { let best = null; for (const z of ZONES) { const d = Math.max(0, Math.hypot(z.x - ME.x, z.z - ME.z) - z.r); if (!best || d < best.d) best = { z, d }; } return best; }
   function zoneBanner(title, sub, color) {
     if (S.showcase) return;
     const b = $('#zone-banner'); b.hidden = true; void b.offsetWidth; b.classList.remove('out'); b.style.setProperty('--zc', color || '#ffd23f');
@@ -2540,6 +2572,7 @@
     const zoom = clamp(0.7 / Math.max(0.3, camera.aspect), 1, 1.35);
     S.fightCam = lerp(S.fightCam || 0, !S.watch && (S.mode === 'fight' || S.mode === 'pull' || S.mode === 'kraken') ? 1 : 0, Math.min(1, dt * 1.6));
     const fc = reduceMotion ? 0 : S.fightCam, hgt = lerp(19, 10.5, fc), back = lerp(14, 15.5, fc);
+    { const sh = (S.sheetH || 300) / Math.max(1, H); look.z += clamp(sh - 0.3, 0, 0.4) * 20 * zoom; }   // keep the boat above the bottom panel
     const want = new THREE.Vector3(look.x, (hgt + extra) * zoom, look.z + (back + extra * 0.7) * zoom);
     look.y = fc * 1.2;
     S.swoop = Math.max(0, (S.swoop || 0) - dt);
@@ -2710,6 +2743,8 @@
   function showPanel(which) { $('#main').hidden = which !== 'main'; $('#fight').hidden = which !== 'fight'; const b = (60 + $('#sheet').offsetHeight + 14) + 'px'; $('#joy').style.bottom = b; $('#drive-hint').style.bottom = b; $('#boost').style.bottom = b; }
 
   function renderHud() {
+    S.sheetH = $('#sheet').offsetHeight + 60;
+    phone.classList.toggle('inzone', !!S.zone || S.mode !== 'idle');
     $('#h-lvl').textContent = 'Lv ' + SAVE.lvl;
     $('#h-xp').style.width = clamp(SAVE.xp / xpFor(SAVE.lvl), 0, 1) * 100 + '%';
     $('#h-ax').textContent = SAVE.ax.toLocaleString('en-US');
@@ -2784,8 +2819,10 @@
     cb.textContent = casting ? 'CASTING…' : full ? 'CHEST FULL' : ps.length ? 'CAST ANOTHER LINE' : 'CAST';
     const lev = rod().lev;
     const why = castBlocker();
-    if (!casting && !full && why) cb.textContent = why === 'Slow down to cast' ? 'SLOW DOWN TO CAST' : why === 'Not enough margin' ? 'NOT ENOUGH MARGIN' : 'FIND A FISHING ZONE';
-    cb.disabled = casting || !!why;
+    const nz = nearestZone();
+    if (!casting && !full && why) cb.textContent = why === 'Slow down to cast' ? 'SLOW DOWN TO CAST' : why === 'Not enough margin' ? 'NOT ENOUGH MARGIN' : `⛵ SAIL TO ${nz.z.name.toUpperCase()} · ${Math.round(nz.d)}m`;
+    cb.disabled = casting || (!!why && !!S.zone);
+    cb.classList.toggle('sail', !S.zone && !casting);
     $('#cast-note').textContent = full ? `All ${cap} lines are out. Pull one in, cut one, or get a bigger chest in Gear.`
       : !S.zone ? 'Drive into a glowing zone. Each one holds different markets; Open Water has them all.'
       : S.target ? `Aiming at ${S.target.spec.market}${SAVE.sonar >= 2 ? (S.target.spec.side > 0 ? ' long' : ' short') : ''} · ${lev}× · ${fmtUSD(SAVE.bait, 0)} bait`
@@ -2996,7 +3033,7 @@
   }
 
   /* input */
-  $('#cast').addEventListener('pointerdown', e => { e.preventDefault(); startCharge(); });
+  $('#cast').addEventListener('pointerdown', e => { e.preventDefault(); if (!S.zone && S.mode === 'idle') { S.goTo = nearestZone().z; toast(`Follow the arrow to ${S.goTo.name}.`, 'good'); SFX.tone(660, 0.08, 'triangle', 0.15); return; } startCharge(); });
   $('#cast').addEventListener('pointerup', releaseCharge); $('#cast').addEventListener('pointerleave', releaseCharge);
   $('#cast').addEventListener('keydown', e => { if (e.key === 'Enter') castLine(); });
   $('#castmore').addEventListener('click', () => { if (S.mode === 'fight') { S.mode = 'idle'; S.active = null; renderLive(); } });
