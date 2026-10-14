@@ -8,7 +8,7 @@ const { WebSocketServer } = require('ws');
 
 // the game itself is served from ../game so one service is the whole deployment
 const GAME_DIR = path.resolve(process.env.GAME_DIR || path.join(__dirname, '..', 'game'));
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png', '.css': 'text/css', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png', '.css': 'text/css', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.wasm': 'application/wasm', '.gz': 'application/gzip' };
 function serveStatic(req, res) {
   let p = decodeURIComponent((req.url || '/').split('?')[0]); if (p === '/' || p === '') p = '/index.html';
   const file = path.resolve(GAME_DIR, '.' + p);
@@ -28,7 +28,54 @@ const ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s => s.trim(
 const rooms = new Map();   // name -> Set(client)
 let seq = 1;
 
+/* ---- play for real: tiny Lighter helpers (the trading itself happens in the player's browser) ----
+   GET /api/faucet?addr=0x…  TESTNET ONLY. Asks Lighter's testnet faucet to create + fund the account for
+   this EVM address. Done here (not in the browser) so it can be rate limited and switched off. */
+const LIGHTER_NET = process.env.LIGHTER_NET || 'testnet';
+const LIGHTER_TESTNET_URL = process.env.LIGHTER_TESTNET_URL || 'https://testnet.zklighter.elliot.ai';
+const FAUCET_PER_IP_HOUR = +process.env.FAUCET_PER_IP_HOUR || 6;
+const faucetIp = new Map();     // ip -> [timestamps in the last hour]
+const faucetAddr = new Map();   // address -> last request time
+const sendJson = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(obj)); };
+const clientIp = req => String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '?';
+async function faucet(req, res, url) {
+  if (LIGHTER_NET !== 'testnet') return sendJson(res, 404, { ok: false, error: 'faucet is testnet only' });
+  const addr = String(url.searchParams.get('addr') || '');
+  if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) return sendJson(res, 400, { ok: false, error: 'bad address' });
+  const now = Date.now(), ip = clientIp(req), key = addr.toLowerCase();
+  const hits = (faucetIp.get(ip) || []).filter(t => now - t < 3600e3);
+  if (hits.length >= FAUCET_PER_IP_HOUR) return sendJson(res, 429, { ok: false, error: 'faucet limit reached, try again later' });
+  if (now - (faucetAddr.get(key) || 0) < 60e3) return sendJson(res, 429, { ok: false, error: 'faucet already asked for this wallet a moment ago' });
+  hits.push(now); faucetIp.set(ip, hits); faucetAddr.set(key, now);
+  if (faucetIp.size > 5000) for (const [k, v] of faucetIp) if (now - v[v.length - 1] > 3600e3) faucetIp.delete(k);
+  if (faucetAddr.size > 5000) for (const [k, t] of faucetAddr) if (now - t > 60e3) faucetAddr.delete(k);
+  let last = 'no answer';
+  for (let i = 0; i < 3; i++) {      // Lighter's testnet faucet is undocumented and flaky: retry a little
+    try {
+      const r = await fetch(`${LIGHTER_TESTNET_URL}/api/v1/faucet?l1_address=${addr}`, { signal: AbortSignal.timeout(15000) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && (j.code === 200 || j.code == null)) return sendJson(res, 200, { ok: true, message: j.message || 'ok' });
+      last = j.message || `HTTP ${r.status}`;
+      if (r.status < 500 && j.message) return sendJson(res, 200, { ok: false, error: 'testnet faucet: ' + j.message, code: j.code });   // a real answer: don't retry
+    } catch (e) { last = e.message; }
+    await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+  }
+  sendJson(res, 502, { ok: false, error: 'testnet faucet: ' + last });
+}
+/* POST /api/deposit-address  MAINNET, NOT IMPLEMENTED YET.
+   TODO(mainnet deposits): create a Lighter Universal Deposit Address for the player's EVM address with
+   POST https://bridge.lighter.xyz/v1/uda (header x-api-key: LIGHTER_BUILDER_API_KEY, which must stay on this
+   server), return the address(es) for the card/crypto on-ramp to pay into, and let the browser poll its
+   Lighter balance as it does on testnet. Needs a Lighter builder key; until then this answers 501. */
+function depositAddress(req, res) { sendJson(res, 501, { ok: false, error: 'mainnet deposits are not set up yet' }); }
+
 const server = http.createServer((req, res) => {
+  if (req.url.startsWith('/api/')) {
+    const url = new URL(req.url, 'http://x');
+    if (url.pathname === '/api/faucet' && req.method === 'GET') { faucet(req, res, url).catch(e => sendJson(res, 500, { ok: false, error: e.message })); return; }
+    if (url.pathname === '/api/deposit-address' && req.method === 'POST') return depositAddress(req, res);
+    return sendJson(res, 404, { ok: false, error: 'not found' });
+  }
   if (req.url === '/health') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: [...rooms.values()].reduce((n, r) => n + r.size, 0) })); return; }
   if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res);
   res.writeHead(405); res.end();
