@@ -337,6 +337,7 @@
   .sail .nick { pointer-events: auto; margin-top: 4px; font: 700 14px var(--body, inherit); text-align: center; padding: 6px 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,.35); background: rgba(6,26,51,.75); color: #fff; width: 200px; }
   .sail .top small { font-weight: 800; color: var(--mist); letter-spacing: .4px; }
   .sail .card { display: grid; gap: 10px; width: 100%; max-width: 380px; justify-self: center; }
+  .sail .card[hidden] { display: none; }
   .sail .pick { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; gap: 6px; }
   .sail .arrow { height: 44px; border-radius: 14px; border: 2px solid var(--line); background: rgba(6,26,51,.8); color: #fff; font-size: 22px; cursor: pointer; font-family: var(--display); }
   .sail .name { text-align: center; }
@@ -588,6 +589,23 @@
   .mk-item button { white-space: nowrap; } .mk-item.on { border-color: #ffd23f; box-shadow: 0 0 0 2px #ffd23f44 inset; }
   .mk-empty, .mk-soon { background: #0a2c4b; border: 2px dashed #1d5585; border-radius: 14px; padding: 14px; color: #b9d6ee; font-size: 13px; display: grid; gap: 4px; }
   .mk-soon b { color: #fff; }
+  .onb h3 { font-family: var(--display); font-size: 22px; margin: 4px 0 6px; text-align: center; }
+  .onb p { font-size: 13.5px; color: #cfe6f7; line-height: 1.45; margin: 0 0 12px; text-align: center; }
+  .onb .big-btn { width: 100%; margin-top: 8px; }
+  .onb-steps { display: flex; justify-content: center; gap: 6px; margin-bottom: 8px; } .onb-steps i { width: 26px; height: 5px; border-radius: 5px; background: #ffffff33; } .onb-steps i.on { background: #ffd23f; } .onb-steps i.done { background: #3ddc97; }
+  .anglers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .anglers button { background: #0e3559; border: 2px solid #1d5585; border-radius: 14px; padding: 8px 4px; color: #fff; display: grid; justify-items: center; gap: 4px; cursor: pointer; font-family: var(--display); font-size: 12.5px; }
+  .anglers button i { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 3px 0 #0006; }
+  .anglers button small { font-family: var(--body, inherit); font-size: 10.5px; color: #b9d6ee; line-height: 1.25; }
+  .anglers button[aria-pressed="true"] { border-color: #ffd23f; background: #164a78; }
+  .onb-nick { display: grid; gap: 4px; font-size: 12px; color: #b9d6ee; margin-top: 10px; } .onb-nick input { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 10px; border: 2px solid #1d5585; background: #06213b; color: #fff; }
+  .rods { display: grid; gap: 8px; }
+  .rods button { display: grid; grid-template-columns: 56px 1fr auto; gap: 10px; align-items: center; text-align: left; background: #0e3559; border: 2px solid #1d5585; border-radius: 14px; padding: 8px 10px; color: #fff; cursor: pointer; }
+  .rods button img { width: 56px; height: 56px; object-fit: contain; } .rods button b { font-family: var(--display); font-size: 16px; } .rods button small { display: block; font-size: 12px; color: #b9d6ee; }
+  .rods button .pr { font-family: var(--display); font-size: 14px; color: #ffd23f; white-space: nowrap; } .rods button .pr img { width: 16px; height: 16px; vertical-align: -3px; }
+  .rods button[aria-pressed="true"] { border-color: #ffd23f; background: #164a78; } .rods button:disabled { opacity: .5; }
+  .onb-wallet { display: block; text-align: center; color: #b9d6ee; margin-top: 8px; } .onb-wallet img { width: 16px; height: 16px; vertical-align: -3px; }
+  .sail .card.onb { background: rgba(6, 26, 51, .88); border: 2px solid #1d5585; border-radius: 20px; padding: 14px; backdrop-filter: blur(6px); }
   .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
@@ -747,7 +765,29 @@
     <div class="sail" id="o-sail" hidden>
       <div class="top"><img src="art/logo.webp" alt="HookLine"><span class="pitch">Every fish is a real Lighter trade.<br><b class="g">Green?</b> Pull it in. <b class="r">Red?</b> Cut the line.</span><small id="sail-who">Pick your boat</small><input id="sail-nick" class="nick" maxlength="16" placeholder="Your captain name" autocomplete="off" hidden><span class="venue-badge" id="venue-badge"><i></i><span>Simulated prices</span></span></div>
       <div></div>
-      <div class="card">
+      <div class="card onb" id="onb" hidden>
+        <div class="onb-steps" id="onb-steps"><i></i><i></i><i></i><i></i></div>
+        <section data-onb="0">
+          <h3>Welcome aboard, angler</h3>
+          <p>Every fish here is a real perp position on Lighter. Sign in to fish with real money, or start as a guest with paper money. You can switch later.</p>
+          <button class="big-btn reel" type="button" data-onbgo="login">SIGN IN</button>
+          <button class="big-btn ghost" type="button" data-onbgo="guest">PLAY AS GUEST</button>
+        </section>
+        <section data-onb="1" hidden>
+          <h3>Pick your angler</h3>
+          <div class="anglers" id="onb-anglers"></div>
+          <label class="onb-nick">Name on the water <input id="onb-nick" maxlength="18" autocomplete="off"></label>
+          <button class="big-btn reel" type="button" data-onbgo="angler">THAT'S ME</button>
+        </section>
+        <section data-onb="2" hidden>
+          <h3>Pick your first rod</h3>
+          <p>Your rod is your leverage. On a 2× rod a 10% price move is 20% on your bait. Bigger rods catch bigger fish, and the Kraken comes faster.</p>
+          <div class="rods" id="onb-rods"></div>
+          <small class="onb-wallet" id="onb-wallet"></small>
+          <button class="big-btn reel" type="button" data-onbgo="rod">NEXT: PICK A BOAT</button>
+        </section>
+      </div>
+      <div class="card" id="sail-card">
         <div class="pick"><button class="arrow" id="sail-prev" type="button" aria-label="Previous boat">‹</button>
           <div class="name"><b id="sail-name">Rowboat</b><small id="sail-desc"></small></div>
           <button class="arrow" id="sail-next" type="button" aria-label="Next boat">›</button></div>
@@ -1218,19 +1258,19 @@
 
   /* ================= save ================= */
   const DEFAULT_SAVE = () => ({
-    lvl: 3, xp: 180, ax: 1250, usd: 1000, paper: 10000,
-    owned: { rod1: 1, rod2: 1, knife1: 1, net0: 1, chest1: 1 },
-    eq: { rod: 'rod2', knife: 'knife1', net: 'net0', chest: 'chest1' },
+    lvl: 1, xp: 0, ax: 250, usd: 1000, paper: 10000, onboarded: false,
+    owned: { rod1: 1, knife1: 1, net0: 1, chest1: 1 },
+    eq: { rod: 'rod1', knife: 'knife1', net: 'net0', chest: 'chest1' },
     charges: { knife1: 3 }, sonar: 0, lures: false,
     stop: -0.15, trail: 0.12, tp: 0.6, bait: 25,
-    dex: { ETH: { n: 2, best: 0.31, shiny: false }, BTC: { n: 1, best: 0.12, shiny: false } },
+    dex: {},
     quests: [
-      { id: 'land', text: 'Land 3 fish', goal: 3, prog: 1, reward: 60, icon: 'tuna' },
+      { id: 'land', text: 'Land 3 fish', goal: 3, prog: 0, reward: 60, icon: 'tuna' },
       { id: 'cut', text: 'Cut a loser before −20%', goal: 1, prog: 0, reward: 80, icon: 'knife2' },
       { id: 'win', text: 'Close a fish in profit', goal: 1, prog: 0, reward: 80, icon: 'net' },
-      { id: 'hold', text: 'Hold 3 fish at once', goal: 3, prog: 1, reward: 100, icon: 'chest2' },
+      { id: 'hold', text: 'Hold 3 fish at once', goal: 3, prog: 0, reward: 100, icon: 'chest2' },
     ],
-    best: { mk: 'ETH', pct: 0.31 },
+    best: null,
     tips: true, seedPos: false, tut: 0,
   });
   let SAVE;
@@ -1245,6 +1285,7 @@
   const net = () => NETS.find(n => n.id === SAVE.eq.net);
   const chest = () => CHESTS.find(c => c.id === SAVE.eq.chest);
   if (!SAVE.eq.boat) { SAVE.eq.boat = 'boat'; SAVE.owned.boat = 1; }
+  if (SAVE.onboarded === undefined) SAVE.onboarded = true;   // saves from before onboarding existed
   if (SAVE.tut === undefined) SAVE.tut = 0;
   SAVE.cooler = SAVE.cooler || []; SAVE.scraps = SAVE.scraps || 0; SAVE.baits = SAVE.baits || {}; if (SAVE.baitEq === undefined) SAVE.baitEq = null; SAVE.sold = SAVE.sold || { day: '', ax: 0 };   // everyone gets the guided first catch once
   SAVE.tips = true;                            // the objective tracker replaced the old tip cards
@@ -3286,6 +3327,46 @@
     placeBoat(S.me, ME.x, ME.z, ME.h, 0, S.time);
     splash3(new THREE.Vector3(ME.x, 0, ME.z), 0.9); sendPresence();
   }
+  /* ---------- first run: sign in → angler → first rod → boat → tutorial ---------- */
+  const ANGLERS = [
+    { n: 'Salty Sam', c: COATS[0], q: 'Fishin\' since the 2017 bull run.' },
+    { n: 'Captain Coral', c: COATS[1], q: 'Never met a short she didn\'t like.' },
+    { n: 'Barnacle Bev', c: COATS[2], q: 'Stops out early. Sleeps well.' },
+    { n: 'Degen Dave', c: COATS[3], q: '50× or nothing, baby.' },
+    { n: 'Pickle Pete', c: COATS[4], q: 'Talks to the fish. They listen.' },
+    { n: 'Lady Luck', c: COATS[5], q: 'Shinies follow her around.' },
+  ];
+  const ONB = { step: 0, angler: 0, rod: 'rod1', nickTyped: false };
+  function onbStep(n) {
+    ONB.step = n; $$('#onb section').forEach(sec => { sec.hidden = +sec.dataset.onb !== n; });
+    $$('#onb-steps i').forEach((i, k) => { i.className = k === n ? 'on' : k < n ? 'done' : ''; });
+    if (n === 1) renderAnglers(); if (n === 2) renderRods();
+  }
+  function renderAnglers() {
+    $('#onb-anglers').innerHTML = ANGLERS.map((a, i) => `<button type="button" data-angler="${i}" aria-pressed="${i === ONB.angler}"><i style="background:${a.c}"></i>${a.n}<small>${a.q}</small></button>`).join('');
+    const ni = $('#onb-nick'); if (!ONB.nickTyped) ni.value = ANGLERS[ONB.angler].n;
+  }
+  function renderRods() {
+    $('#onb-rods').innerHTML = RODS.slice(0, 2).map(r => { const afford = r.price === 0 || SAVE.ax >= r.price;
+      return `<button type="button" data-onbrod="${r.id}" aria-pressed="${ONB.rod === r.id}" ${afford ? '' : 'disabled'}>${img(r.id)}<span><b>${r.name} · ${r.lev}×</b><small>${r.desc}</small></span><span class="pr">${r.price ? `${img('coin')} ${r.price}` : 'FREE'}</span></button>`; }).join('');
+    $('#onb-wallet').innerHTML = `You have ${img('coin')} ${SAVE.ax} AX. Earn more by selling fish at the Market.`;
+  }
+  function showOnboarding(on) { $('#onb').hidden = !on; $('#sail-card').hidden = on; const ni = $('#sail-nick'); if (ni) ni.style.visibility = on ? 'hidden' : ''; if (on) onbStep(ONB.step); }
+  $('#onb').addEventListener('click', async e => {
+    const an = e.target.closest('[data-angler]'); if (an) { ONB.angler = +an.dataset.angler; const a = ANGLERS[ONB.angler]; SAVE.coat = a.c; swapBoat(); renderAnglers(); SFX.init(); SFX.tone(880, 0.06, 'triangle', 0.15); return; }
+    const rb = e.target.closest('[data-onbrod]'); if (rb) { ONB.rod = rb.dataset.onbrod; renderRods(); SFX.tone(740, 0.06, 'triangle', 0.15); return; }
+    const go = e.target.closest('[data-onbgo]'); if (!go) return; const k = go.dataset.onbgo; SFX.init();
+    if (k === 'login') { const api = realApi(); if (api) { try { go.textContent = 'Signing in…'; await api.login(); const st = await api.status(); renderReal(st); } catch (err) { go.textContent = 'SIGN IN'; toast(err.message || 'Sign-in was cancelled.', 'warn'); return; } } onbStep(1); }
+    else if (k === 'guest') onbStep(1);
+    else if (k === 'angler') { const nick = $('#onb-nick').value.trim().slice(0, 18) || ANGLERS[ONB.angler].n; SAVE.nick = nick; ME.nick = nick; SAVE.coat = ANGLERS[ONB.angler].c; const ni = $('#sail-nick'); if (ni) ni.value = nick; persist(); onbStep(2); }
+    else if (k === 'rod') {
+      const r = RODS.find(x => x.id === ONB.rod);
+      if (r.price && !SAVE.owned[r.id]) { if (SAVE.ax < r.price) return; SAVE.ax -= r.price; SAVE.owned[r.id] = 1; SFX.coin(); toast(`${r.name} bought for ${r.price} AX`, 'good'); }
+      SAVE.eq.rod = r.id; SAVE.onboarded = true; persist(); renderAll(); showOnboarding(false); renderSail();
+      $('#sail-who').textContent = `Fishing as ${ME.nick} · last step: pick your boat`;
+    }
+  });
+  $('#onb-nick').addEventListener('input', () => { ONB.nickTyped = true; });
   /* ---------- set sail: the camera orbits your boat while you pick ---------- */
   let sailIdx = 0;
   const SILLY = ['Captain', 'Admiral', 'Skipper', 'Salty', 'Sir', 'Lady', 'Lil', 'Big'], SILLY2 = ['Bobber', 'Barnacle', 'Guppy', 'Wahoo', 'Kelp', 'Minnow', 'Squid', 'Pickle', 'Noodle', 'Biscuit'];
@@ -3294,7 +3375,7 @@
     sailIdx = Math.max(0, BOATS.findIndex(b => b.id === SAVE.eq.boat));
     S.showcase = true; phone.classList.add('showcase'); $('#o-sail').hidden = false;
     $('#sail-who').textContent = `${ME.nick && ME.nick !== 'You' ? `Fishing as ${ME.nick} · ` : ''}${peers.size ? `${peers.size + 1} anglers on the water` : 'Pick your boat'}`;
-    renderSail();
+    renderSail(); showOnboarding(!SAVE.onboarded);
   }
   function renderSail() {
     const b = BOATS[sailIdx], owned = !!SAVE.owned[b.id], locked = SAVE.lvl < b.lvl;
@@ -3618,7 +3699,7 @@
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
   $('#sail-go').addEventListener('click', () => { const b = BOATS[sailIdx]; if (!SAVE.owned[b.id]) { if (SAVE.ax < b.price || SAVE.lvl < b.lvl) return; SAVE.ax -= b.price; SAVE.owned[b.id] = 1; SAVE.eq.boat = b.id; SFX.coin(); persist(); renderAll(); renderSail(); return; } closeSail(); });
-  window.HookLineDebug = { S, ME, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; }, endRound: () => endRound(), mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
+  window.HookLineDebug = { S, ME, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; }, endRound: () => endRound(), skipOnboarding: () => { SAVE.onboarded = true; persist(); showOnboarding(false); }, mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
 
   /* boot */
   (async () => {
