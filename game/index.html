@@ -1177,7 +1177,7 @@
     uDeep: { value: new THREE.Color('#0a4f86') }, uMid: { value: new THREE.Color('#1689b8') }, uShallow: { value: new THREE.Color('#3fe0d6') }, uSky: { value: new THREE.Color('#bfe9ff') }, uFog: { value: new THREE.Color('#9ad8ee') },
     uIsl: { value: Array.from({ length: MAX_ISL }, () => new THREE.Vector3(9999, 9999, 0)) },
     uZn: { value: Array.from({ length: MAX_ZN }, () => new THREE.Vector4(9999, 9999, 0, 0)) }, uZnCol: { value: Array.from({ length: MAX_ZN }, () => new THREE.Color()) },
-    uKr: { value: new THREE.Vector4(0, 0, 0, 0) }, uDark: { value: 0 },
+    uKr: { value: new THREE.Vector4(0, 0, 0, 0) }, uDark: { value: 0 }, uBoat: { value: new THREE.Vector4(0, 0, 0, 0) }, uFish: { value: new THREE.Vector4(0, 0, 0, 0) },
   } : { uTime: { value: 0 } };
   const WATER_VS = `uniform float uTime; varying vec3 vW; varying vec3 vN; varying float vH;
     vec3 wave(vec2 p, vec2 d, float A, float L, float S, inout vec3 n){ float k = 6.28318/L; float f = k*(dot(d,p) - S*uTime); float c = cos(f);
@@ -1188,7 +1188,7 @@
       o += wave(w.xz, normalize(vec2(0.8,-0.7)), 0.06, 6.5, 1.5, n);
       o += wave(w.xz, normalize(vec2(-1.0,-0.2)), 0.035, 3.7, 1.2, n);
       w.xyz += o; vW = w.xyz; vN = normalize(n); vH = o.y; gl_Position = projectionMatrix*viewMatrix*w; }`;
-  const WATER_FS = `uniform float uTime, uDark; uniform vec3 uCam, uSun, uDeep, uMid, uShallow, uSky, uFog; uniform vec3 uIsl[${MAX_ISL}]; uniform vec4 uZn[${MAX_ZN}]; uniform vec3 uZnCol[${MAX_ZN}]; uniform vec4 uKr;
+  const WATER_FS = `uniform float uTime, uDark; uniform vec3 uCam, uSun, uDeep, uMid, uShallow, uSky, uFog; uniform vec3 uIsl[${MAX_ISL}]; uniform vec4 uZn[${MAX_ZN}]; uniform vec3 uZnCol[${MAX_ZN}]; uniform vec4 uKr, uBoat, uFish;
     varying vec3 vW; varying vec3 vN; varying float vH;
     float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
     float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
@@ -1207,6 +1207,8 @@
       // kraken whirlpool: twist the water around the beast
       float kd = length(p - uKr.xy); float kr = uKr.z*(1.0 - smoothstep(2.0, 16.0, kd));
       if (uKr.z > 0.0){ float ang = atan(p.y - uKr.y, p.x - uKr.x); float sw = sin(ang*3.0 + kd*0.9 - t*7.0); N.xz += vec2(cos(ang+1.57), sin(ang+1.57))*kr*0.6; }
+      { vec2 db = p - uBoat.xy; float d = length(db); float rip = sin(d*2.6 - t*7.0)*exp(-d*0.22)*smoothstep(0.0, 2.5, d)*(0.25 + uBoat.z*0.06); N.xz += db/(d+0.001)*rip*0.6; }
+      { vec2 df = p - uFish.xy; float d = length(df); float rip = sin(d*3.4 - t*9.0)*exp(-d*0.35)*uFish.z; N.xz += df/(d+0.001)*rip*0.7; }
       N = normalize(N);
       vec3 V = normalize(uCam - vW), L = normalize(uSun), Hh = normalize(L + V);
       // depth: deep open sea, lighter near islands (lagoons) with foam at the shore
@@ -1218,6 +1220,9 @@
         lap = max(lap, smoothstep(0.62, 0.95, sin(d*2.4 - t*2.6))*smoothstep(4.5, 0.5, d)*step(-0.5, d)); }
       float sw = 0.5 + vH*2.4;
       vec3 col = mix(uDeep, uMid, clamp(sw, 0.0, 1.0)*0.75 + 0.15);
+      col += vec3(0.1, 0.55, 0.5)*pow(clamp(vH*3.2, 0.0, 1.0), 2.0)*0.35;          // sunlight through the crests
+      vec2 wd = normalize(vec2(1.0, 0.35)); float streak = vn(vec2(dot(p, wd)*0.35 - t*0.4, dot(p, vec2(-wd.y, wd.x))*3.0));
+      col += vec3(0.9)*smoothstep(0.8, 0.95, streak)*0.035;                           // wind lines
       col = mix(col, uShallow, shallow*0.85);
       // light caustics in the shallows and inside fishing zones
       float ca = caustic(p*0.075, t*0.45);
@@ -1451,7 +1456,8 @@
   function resizePost() { if (!composer || !W || !H) return; composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(W, H); }
   function renderFrame(dt) {
     GRADE.flash = Math.max(0, GRADE.flash - dt * 2.2); GRADE.ab = Math.max(0, GRADE.ab - dt * 2.5); GRADE.bloomKick = Math.max(0, GRADE.bloomKick - dt * 1.5);
-    waterUniforms.uDark.value = GRADE.dark;
+    waterUniforms.uDark.value = GRADE.dark; waterUniforms.uBoat.value.set(ME.x, ME.z, Math.abs(ME.v), 0);
+    if (S.fishObj && S.mode === 'fight') { const pf = activePos(); waterUniforms.uFish.value.set(S.fishObj.position.x, S.fishObj.position.z, pf && pnlFrac(pf) < 0 ? 0.9 : 0.4, 0); } else waterUniforms.uFish.value.z = 0;
     if (!composer) { renderer.render(scene, camera); return; }
     const u = gradePass.uniforms;
     u.uTime.value = S.time; u.uRed.value = GRADE.red; u.uFlash.value = GRADE.flash; u.uFlashCol.value.copy(GRADE.flashCol); u.uAb.value = GRADE.ab; u.uDark.value = GRADE.dark;
@@ -1875,8 +1881,8 @@
     const full = url + (url.includes('?') ? '&' : '?') + 'room=lobby';
     const connect = () => {
       try { ws = new WebSocket(full); } catch (_) { setTimeout(connect, 3000); return; }
-      ws.onopen = () => { tries = 0; console.info('[mp] connected'); if (last) ws.send(last); };
-      ws.onclose = e => { console.info('[mp] closed', e.code); if (peersCb) peersCb({ peers: [] }); setTimeout(connect, Math.min(15000, 800 * 2 ** tries++)); };
+      ws.onopen = () => { tries = 0;  if (last) ws.send(last); };
+      ws.onclose = e => { if (peersCb) peersCb({ peers: [] }); setTimeout(connect, Math.min(15000, 800 * 2 ** tries++)); };
       ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (_) { return; } if (m.t === 'hello') me = m.id;
         if (m.t === 'peers' && peersCb && Array.isArray(m.peers)) peersCb({ peers: m.peers.map(p => ({ peer: String(p.peer), presence: p.presence, kind: 'viewer', sameTab: p.peer === me, isMe: false, by: null })) }); };
     };
@@ -3029,7 +3035,7 @@
       await armKnife(p, S.meta[p.id]);
       S.positions = [...venue.positions.values()];
     }
-    ME.x = 0; ME.z = 9; ME.h = -Math.PI / 2;
+    ME.x = rand(-8, 8); ME.z = rand(9, 15); ME.h = -Math.PI / 2;   // spread players around the harbor
     camera.position.set(0, 25, 26); S.camLook = new THREE.Vector3(0, 0, 8);
     nextActive();
     S.quiet = false; S.ready = true;
