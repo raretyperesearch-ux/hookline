@@ -981,7 +981,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-<script src="config.js"></script>
+<script src="config.js"></script><script src="markets.js"></script><script src="economy.js"></script>
 <script src="hookline-real.js"></script>
 <script>
 (() => {
@@ -1005,7 +1005,7 @@
      MARKETS. marketIndex values are placeholders: LighterVenue reads the
      real indexes and decimals from the order book list on connect.
      ===================================================================== */
-  const ROSTER = [["BTC",1,83705.5,50,"reef","swordfish","Sir Satoshi Swordfish","#f7931a","The OG. Pointy. Unbothered.",714100547,5,1,0.0018],["ETH",0,2511.42,50,"bay","tuna","Ultrasound Tuna","#7b7bff","Makes a noise only bats can hear.",348289405,4,2,0.0024],["SOL",2,107.673,25,"bay","piranha","Turbo Sol-mon","#19e6a0","Goes fast, sometimes stops.",62423926,3,3,0.0024],["ZEC",90,1265.83,20,"reef","eel","Zcash Ghost Eel","#f4b728","You cannot see it. That is the point.",40801908,3,3,0.0018],["HYPE",24,82.3343,20,"lagoon","koi","Hype Koi Carp-tain","#5fe0d4","Captain of the hype cycle.",38306160,2,4,0.003],["US100",181,30672.0,30,"pier","swordfish","Tech Hundred Marlin","#8e44ad","A hundred swordfish, one sword.",30844375,6,0,0.0011],["SNDK",139,1470.98,20,"pier","koi","SNDK-a-saurus Koi","#ff6b6b","Bites when you least expect it.",23303343,4,2,0.0011],["XAU",92,4162.04,25,"gold","sunfish","Golden Sunfish","#d4af37","Shiny. Heavy. Boomer-approved.",22357080,4,2,0.0007],["XAG",93,59.2242,25,"gold","koi","Silver Koi","#c0c0c0","Gold's little sibling.",20093988,2,4,0.0007],["NEAR",10,5.09386,15,"bay","eel","Near-Shore Eel","#00ec97","Always close. Never quite there.",15708929,1,5,0.0024],["AAPL",113,341.415,20,"pier","koi","Apple Koi","#a2aaad","Sleek. Overpriced. Beloved.",13272217,3,3,0.0011],["LIT",120,3.3879,5,"lagoon","angler","Lighter Lanternfish","#ffd23f","The house fish. Brings its own light.",12515288,2,4,0.003],["SKHYNIXUSD",161,1095.36,10,"pier","shark","Sparkly Skhynix Shark","#38d9a9","Allergic to stop losses.",11672518,3,3,0.0011],["NVDA",110,229.843,20,"pier","shark","Nvidia GPU Shark","#76b900","Sells shovels to other sharks.",11575479,3,3,0.0011],["WTI",145,93.568,20,"gold","blobfish","Oil Slick Blobfish","#3b2f2f","Slippery. Very slippery.",11538971,3,3,0.0007],["MU",164,957.29,20,"pier","catfish","Sleepy MU Catfish","#ffd43b","Bites when you least expect it.",10023740,4,2,0.0011],["SPCX",194,158.29,20,"pier","tuna","Lil' SPCX Tuna","#ff6b6b","Rumoured to be a whale in disguise.",9556605,4,2,0.0011],["US500",180,7822.9,50,"pier","tuna","Five Hundred Sardines","#2e86c1","A school, wearing a tuna costume.",8403501,5,1,0.0011],["META",117,768.15,20,"pier","jelly","Metaverse Jellyfish","#0866ff","Has legs now.",7891635,4,2,0.0011],["IBM",188,231.09,10,"pier","catfish","Disco IBM Catfish","#a9e34b","Will absolutely wreck your bait.",7834155,4,2,0.0011],["QQQ",129,746.41,30,"pier","eel","Triple-Q Tech Eel","#6c3483","Three Qs, one eel.",7197441,4,2,0.0011],["BRENTOIL",159,103.3,20,"gold","catfish","Brent the Oily Catfish","#5a4632","From the North Sea. Grumpy.",6544450,4,2,0.0007],["AMZN",114,259.569,20,"pier","piranha","Amazon Piranha","#ff9900","Delivers bites in one day.",5950917,3,3,0.0011],["GOOGL",116,356.67,20,"pier","clown","Googly-Eyed Clownfish","#4285f4","Has seen your search history.",5575476,4,2,0.0011],["SPY",128,780.09,50,"pier","tuna","Index Tuna","#1a5276","Boring. Wins anyway.",5508758,4,2,0.0011],["MSFT",115,543.6,20,"pier","tuna","Window Tuna","#00a4ef","Comes with a free paperclip.",5058326,4,2,0.0011],["TSLA",112,376.85,20,"pier","eel","Tesla Electric Eel","#cc0000","Self-swimming. Mostly.",4974613,4,2,0.0011],["PUMP",45,0.005053,10,"bayou","puffer","Pump Puffer","#ff5ca8","Keeps inflating. Do not poke.",4708931,0,6,0.0048],["SOXL",197,129.19,20,"pier","koi","Wiggly SOXL Koi","#ff6b6b","Very shy. Then very not.",4594512,4,2,0.0011],["ENA",29,0.21169,10,"bay","jelly","Ethena Yield Jelly","#111111","Pays you to float.",3859569,1,5,0.0024],["UNI",30,7.4691,15,"bay","sunfish","Uni-Corn Sunfish","#ff007a","Has a horn. Swaps anything.",3340729,2,4,0.0024],["SKHY",216,155.68,10,"pier","tuna","Baron von SKHY Tuna","#69db7c","Rumoured to be a whale in disguise.",3154801,4,2,0.0011],["INTC",137,103.798,10,"pier","blobfish","Intel Inside Blobfish","#0071c5","Something is inside. Unclear what.",3110310,3,3,0.0011],["CRCL",121,84.988,10,"pier","catfish","Chonky CRCL Catfish","#748ffc","Allergic to stop losses.",3036843,3,3,0.0011],["AMD",138,611.5,10,"pier","piranha","Red Team Piranha","#ed1c24","Underdog with sharp teeth.",2765337,4,2,0.0011],["ANTHROPIC",193,2087.1,5,"abyss","crab","Claw-d Crab","#d97757","Helpful, harmless, pinchy.",2385254,5,1,0.0032],["NATGAS",158,3.6434,10,"gold","puffer","Gassy Puffer","#58c4dd","Do not light a match.",2319822,2,4,0.0007],["SKR",130,0.016109,3,"bayou","clown","Sleepy SKR Clownfish","#ff6b6b","Has strong opinions about candles.",2242656,0,6,0.0048],["SAMSUNGUSD",162,177.847,10,"pier","shark","Chonky Samsung Shark","#3bc9db","Swims in circles. Like the chart.",2206148,3,3,0.0011],["XRP",7,1.37097,20,"reef","eel","Ripple Eel","#23292f","Makes little ripples. Wins lawsuits.",2008227,0,6,0.0018],["MRNA",228,216.92,10,"pier","catfish","Disco MRNA Catfish","#ffd43b","Rumoured to be a whale in disguise.",1823698,4,2,0.0011],["DRAM",195,52.867,20,"pier","eel","Turbo DRAM Eel","#f783ac","Swims in circles. Like the chart.",1511298,3,3,0.0011],["WLD",6,0.51617,10,"bay","angler","Worldcoin Orb-Angler","#000000","Wants to scan your eyeball.",1499924,1,5,0.0024],["BNB",25,744.773,20,"reef","koi","Big Bnb Bream","#f3ba2f","Sits in the middle of every pond.",1425723,2,4,0.0018],["NBIS",189,210.39,10,"pier","tuna","NBIS McFinface","#4dabf7","Allergic to stop losses.",1365542,4,2,0.0011],["PLTR",111,209.288,10,"pier","angler","Palantir Seeing-Eye Angler","#101010","Already knows what you will cast.",1270223,3,3,0.0011],["XMR",77,555.147,10,"reef","angler","Monero Mystery Angler","#ff6600","Lantern on. Face hidden.",1264510,3,3,0.0018],["OPENAI",192,1699.76,5,"abyss","shark","Great White GPT","#10a37f","Predicts your next bite.",1219872,4,2,0.0032],["COIN",109,182.5,10,"pier","crab","Coinbase Crab","#0052ff","Charges a fee to pinch you.",1114944,3,3,0.0011],["VVV",69,23.0001,5,"abyss","jelly","Sparkly VVV Jelly","#748ffc","Eats liquidity for breakfast.",1097375,2,4,0.0032],["ZRO",60,2.06928,5,"bay","koi","ZRO-a-saurus Koi","#ffd43b","Only comes out at market open.",1058620,1,5,0.0024],["PRL",4097,1.8969,3,"bay","jelly","Baron von PRL Jelly","#ffa94d","Bites when you least expect it.",992589,2,4,0.0024],["CBRS",175,149.85,10,"pier","tuna","Sparkly CBRS Tuna","#f783ac","Eats liquidity for breakfast.",980131,4,2,0.0011],["STRK",104,0.08389,5,"bay","swordfish","Starknet Starfish-Sword","#ec796b","Cairo-coded fins.",938547,1,5,0.0024],["S",40,0.06023,5,"bay","clown","Sonic the Clownfish","#1e40af","Gotta swim fast.",912516,1,5,0.0024],["XPL",71,0.08291,10,"bay","sunfish","Baron von XPL Sunfish","#748ffc","Very shy. Then very not.",839952,1,5,0.0024],["TIA",67,0.57793,10,"bay","jelly","Celestia Jelly","#7b2bf9","Modular. Comes in pieces.",806422,1,5,0.0024],["ONDO",38,0.46996,10,"bay","crab","Ondo Treasury Crab","#0a2540","Hides T-bills in its shell.",750312,1,5,0.0024],["CASHCAT",221,0.12198,3,"bayou","catfish","Cash Catfish","#2ec4b6","Purrs in dollars.",748931,1,5,0.0048],["GRASS",52,0.73155,5,"abyss","blobfish","Touch-Grass Blobfish","#22c55e","Has never touched grass.",746265,1,5,0.0032],["PONS",231,0.32867,3,"pier","catfish","Turbo PONS Catfish","#ffa94d","Rumoured to be a whale in disguise.",742966,1,5,0.0011],["MSTR",122,154.34,10,"pier","swordfish","Saylor Marlin","#ff6b00","Converted its whole body into Bitcoin.",723622,4,2,0.0011],["GRAM",12,1.37787,20,"bayou","blobfish","Turbo GRAM Blobfish","#69db7c","Allergic to stop losses.",717511,1,5,0.0048],["ADA",39,0.2362,10,"reef","jelly","Cardano Peer-Reviewed Jelly","#3468d1","Will swim after the paper is published.",706012,1,5,0.0018],["OP",55,0.15642,15,"bay","clown","Optimistic Clownfish","#ff0420","Sees only green candles.",680117,1,5,0.0024],["HOOD",108,111.176,10,"pier","catfish","Robinhood Hood-fish","#00c805","Steals from the rich pond.",591720,3,3,0.0011],["AVAX",9,10.2802,10,"reef","crab","Avalanche Crab","#e84142","Snow on the claws.",529349,2,4,0.0018],["SUI",16,1.06063,10,"bay","sunfish","Sui-t Sunfish","#4da2ff","Wears a suit. Very serious.",481641,1,5,0.0024],["DRV",4099,0.45019,3,"lagoon","angler","Baron von DRV Angler","#ffa94d","Rumoured to be a whale in disguise.",466417,1,5,0.003],["QNT",190,214.42,5,"reef","tuna","Sir QNT the Tuna","#da77f2","Very shy. Then very not.",453223,3,3,0.0018],["CC",101,0.12434,5,"bay","jelly","Grumpy CC Jelly","#f783ac","Eats liquidity for breakfast.",435198,1,5,0.0024],["FARTCOIN",21,0.16415,10,"bayou","puffer","Toot Puffer","#a7c957","Propelled by questionable gas.",432223,1,5,0.0048],["AAVE",27,161.844,10,"bay","angler","Aave Ghost Angler","#b6509e","Lends you its lantern, with interest.",401770,3,3,0.0024],["LINK",8,12.9888,10,"reef","eel","Chainlink Eel","#2a5ada","Links everything to everything.",387303,1,5,0.0018],["PYTH",78,0.08204,5,"bay","eel","Pythia Oracle Eel","#e6dafe","Whispers prices.",384970,1,5,0.0024],["AI",232,0.12077,3,"abyss","octopus","Artificial Octopus","#a29bfe","Trained on fish memes.",380953,1,5,0.0032],["STABLECOINX",229,12.5861,5,"gold","koi","Captain Stablecoinx Koi","#69db7c","Swims in circles. Like the chart.",367671,2,4,0.0007],["ARB",50,0.19101,15,"bay","tuna","Arbi-Tuna","#28a0f0","Rolls up, rolls down.",363859,1,5,0.0024],["TAO",13,280.68,5,"abyss","octopus","Bittensor Brain-topus","#cccccc","Nine brains. Overthinks.",316788,3,3,0.0032],["LTC",35,62.063,10,"reef","tuna","Lite Tuna","#a6a9aa","Same fish, half the calories.",311546,3,3,0.0018],["EURUSD",96,1.1219,50,"gold","eel","Euro Eel","#003399","Slides between two flags.",304969,1,5,0.0007],["1000PEPE",4,0.004204,10,"bayou","blobfish","Pepe the Frogfish","#5cc24b","Feels good, man.",278010,0,6,0.0048],["STRC",156,99.697,10,"pier","catfish","Baron von STRC Catfish","#da77f2","Swims in circles. Like the chart.",272206,3,3,0.0011],["LITE",178,995.73,10,"pier","tuna","Big LITE Energy Tuna","#ff8787","Swims in circles. Like the chart.",257752,4,2,0.0011],["AERO",65,0.9083,3,"bay","sunfish","AERO-a-saurus Sunfish","#ffa94d","Rumoured to be a whale in disguise.",244125,1,5,0.0024],["STONK",4095,0.12616,5,"pier","eel","Big STONK Energy Eel","#f783ac","Allergic to stop losses.",235192,1,5,0.0011],["DOGE",3,0.084762,15,"bayou","puffer","Much Wow Puffer","#e8c547","Such inflate. Very spike.",222504,0,6,0.0048],["TSM",168,447.8,10,"pier","eel","Turbo TSM Eel","#ffd43b","Rumoured to be a whale in disguise.",221853,4,2,0.0011],["MON",91,0.02479,10,"bay","koi","Monad Koi","#836ef9","Parallel fins.",208298,1,5,0.0024],["ETHFI",64,0.69144,5,"bay","tuna","Ether.fi Fry","#6e5bff","Restaked twice. Dizzy.",197097,1,5,0.0024],["USDKRW",105,1339.22,25,"gold","eel","Disco Usdkrw Eel","#748ffc","Eats liquidity for breakfast.",193878,4,2,0.0007],["CRV",36,0.33986,10,"bay","eel","Curve Eel","#ff4e4e","Extremely curvy.",193469,1,5,0.0024],["JTO",134,0.53868,10,"bay","jelly","Jito Tip Jelly","#2bd47f","Tips the validator, then you.",161164,1,5,0.0024],["MORPHO",68,2.38282,5,"bay","koi","Morpho Butterflyfish","#2470ff","Pretty. Lends things.",158605,1,5,0.0024],["ICP",102,3.1186,5,"reef","jelly","Sleepy ICP Jelly","#a9e34b","Very shy. Then very not.",156220,2,4,0.0018],["LDO",46,0.43027,10,"bay","octopus","Lido Octopus","#00a3ff","Stakes with all eight arms.",152049,1,5,0.0024],["DOT",11,1.16279,10,"reef","clown","Polka-Dot Clownfish","#e6007a","Dots. So many dots.",150901,1,5,0.0018],["JUP",26,0.3335,10,"bay","sunfish","Jupiter Jumper","#c7f284","Jumps aggregator to aggregator.",150054,1,5,0.0024],["ARC",132,0.029028,3,"pier","catfish","Sleepy ARC Catfish","#ff8787","Will absolutely wreck your bait.",149473,0,6,0.0011],["POL",14,0.101304,8,"reef","clown","POL McFinface","#ff6b6b","Very shy. Then very not.",148285,0,6,0.0018],["ORCL",165,143.88,10,"pier","eel","Sparkly ORCL Eel","#a9e34b","Bites when you least expect it.",143320,4,2,0.0011],["SYRUP",44,0.23291,5,"bay","tuna","Baron von SYRUP Tuna","#ff8787","Very shy. Then very not.",130582,1,5,0.0024],["GBPUSD",97,1.32808,50,"gold","tuna","Cheeky Pound Pike","#cf142b","Drinks tea between bites.",123522,1,5,0.0007],["TRX",43,0.33111,10,"reef","octopus","Tron Octopus","#ff0013","Eight arms, all sending stablecoins.",120555,1,5,0.0018],["USDCAD",100,1.41807,25,"gold","sunfish","Loonie Sunfish","#d52b1e","Apologises after it bites.",117194,1,5,0.0007],["FIL",103,1.17662,5,"reef","koi","Lil' FIL Koi","#f783ac","Only comes out at market open.",114364,1,5,0.0018],["CHIP",163,0.05798,3,"pier","swordfish","Grumpy CHIP Swordfish","#da77f2","Only comes out at market open.",108110,1,5,0.0011],["ZK",56,0.016052,8,"bay","angler","Zero-Knowledge Angler","#8c8dfc","Proves it bit you, reveals nothing.",103598,0,6,0.0024],["TRUMP",15,1.9141,10,"bayou","sunfish","Tremendous Sunfish","#ff4d4d","Many people say it is the best fish.",103130,2,4,0.0048],["USELESS",66,0.17572,3,"bayou","blobfish","Truly Useless Blobfish","#e0aaff","Does nothing. Proud of it.",102526,1,5,0.0048],["PENGU",47,0.007814,8,"bayou","sunfish","Waddle Sunfish","#8ecae6","Waddles. Underwater. Somehow.",95602,0,6,0.0048],["PENDLE",37,2.198,5,"bay","clown","Pendle Pendulum Fish","#25cdd6","Swings between yield and fixed.",95055,2,4,0.0024],["USDJPY",98,157.983,50,"gold","koi","Yen Koi","#bc002d","Carry-trade legend.",94928,3,3,0.0007],["SPX",42,0.37275,5,"pier","koi","SPX McFinface","#a9e34b","Loves a good short squeeze.",93272,1,5,0.0011],["USDCHF",99,0.83057,25,"gold","sunfish","Turbo Usdchf Sunfish","#f783ac","Very shy. Then very not.",89370,1,5,0.0007],["SEI",32,0.06528,10,"bay","shark","Sei Shark","#9e1f19","Very fast parallel bites.",88827,1,5,0.0024],["VIRTUAL",41,0.70522,5,"abyss","jelly","Virtual Jellyfish","#3cf2ff","Not real. Probably.",87533,1,5,0.0032],["RIVER",126,1.129,3,"bay","tuna","Grumpy RIVER Tuna","#f783ac","Has strong opinions about candles.",82097,3,3,0.0024],["WLFI",72,0.05793,5,"bay","sunfish","Liberty Sunfish","#c9a227","Patriotic and shiny.",77428,1,5,0.0024],["XCU",136,6.7859,20,"gold","crab","Copper Crab","#b87333","Conducts electricity. And itself.",74449,2,4,0.0007],["BABA",177,112.99,10,"pier","koi","Captain BABA Koi","#38d9a9","Has strong opinions about candles.",67173,4,2,0.0011],["BCH",58,279.359,10,"reef","tuna","Bitcoin Cash Bass","#8dc351","The bigger-block cousin.",65867,3,3,0.0018],["PAXG",48,4162.95,25,"gold","sunfish","Paxos Gold Sunfish","#e4c26b","Gold, but on-chain.",60634,4,2,0.0007],["APT",31,0.83,10,"bay","koi","Aptos Koi","#06f7f7","Move-language native.",59318,2,4,0.0024],["ASTER",83,0.7025,5,"lagoon","jelly","Aster Starjelly","#f5b301","Pointy stars, soft middle.",56904,1,5,0.003],["HBAR",59,0.08684,5,"reef","crab","H-Bar Hermit Crab","#3e3e3e","Lives in a council-governed shell.",56226,1,5,0.0018],["CRWV",167,78.31,10,"pier","tuna","Disco CRWV Tuna","#ffa94d","Loves a good short squeeze.",54260,4,2,0.0011],["1000BONK",18,0.003241,10,"bayou","piranha","Bonk Piranha","#ff9f1c","Bonks first, asks later.",47540,0,6,0.0048],["MRVL",174,271.56,10,"pier","eel","Baron von MRVL Eel","#748ffc","Rumoured to be a whale in disguise.",46719,4,2,0.0011],["XIAOMI",203,3.3593,10,"pier","swordfish","Lil' Xiaomi Swordfish","#f783ac","Loves a good short squeeze.",46367,2,4,0.0011],["XLM",119,0.19001,5,"reef","jelly","Stellar Starjelly","#14b6e7","Glows a little.",43446,1,5,0.0018],["TTWO",179,201.7,5,"pier","swordfish","Disco TTWO Swordfish","#38d9a9","Will absolutely wreck your bait.",43088,4,2,0.0011],["EIGEN",49,0.24367,5,"bay","eel","EIGEN-a-saurus Eel","#da77f2","Allergic to stop losses.",41687,1,5,0.0024],["RAY",233,2.0253,5,"bay","shark","Raydium Ray","#c200fb","Technically a ray. Close enough.",36623,2,4,0.0024],["XPD",146,1135.7,20,"gold","sunfish","Wiggly XPD Sunfish","#ffd43b","Loves a good short squeeze.",35547,5,1,0.0007],["XPT",147,1666.5,20,"gold","koi","Platinum Koi","#e5e4e2","Rarer than gold. Quieter.",35534,5,1,0.0007],["1000SHIB",17,0.005199,10,"bayou","shark","Shiba Sharku","#ff8c42","Very bark, many teeth.",34883,0,6,0.0048],["DELL",187,571.0,10,"pier","tuna","Sleepy DELL Tuna","#a9e34b","Bites when you least expect it.",34732,4,2,0.0011],["EWY",166,166.39,20,"pier","shark","EWY McFinface","#38d9a9","Bites when you least expect it.",34668,4,2,0.0011],["SKY",79,0.07752,10,"bay","sunfish","Sky-Diving Sunfish","#1aab9b","Used to be called something else.",32563,0,6,0.0024],["MEGA",94,0.04497,3,"bay","shark","Mega-lodon","#ff3366","Big. Fast. Real-time.",32458,1,5,0.0024],["CAP",212,0.086954,3,"pier","eel","Captain CAP Eel","#da77f2","Loves a good short squeeze.",30886,0,6,0.0011],["MNT",63,0.54562,5,"reef","clown","Wiggly MNT Clownfish","#748ffc","Very shy. Then very not.",28287,1,5,0.0018],["MET",95,0.3868,5,"bay","koi","MET McFinface","#f783ac","Bites when you least expect it.",27685,1,5,0.0024],["NZDUSD",107,0.56326,25,"gold","blobfish","Professor Nzdusd Blobfish","#da77f2","Only comes out at market open.",26290,1,5,0.0007],["ANSEM",219,0.13384,3,"bayou","angler","Ansem the Caller","#9d4edd","Calls the top. Calls the bottom. Calls you.",22786,1,5,0.0048],["DATA",34,0.2047,10,"pier","swordfish","Grumpy DATA Swordfish","#69db7c","Bites when you least expect it.",21880,2,4,0.0011],["H100",182,2.9865,10,"abyss","piranha","H100 GPU Piranha","#76b900","Eats electricity.",21255,2,4,0.0032],["CXMT",217,7.1224,5,"pier","tuna","Professor CXMT Tuna","#ffd43b","Allergic to stop losses.",19672,2,4,0.0011],["WIF",5,0.20879,10,"bayou","catfish","Dog Wif Fish","#c49a6c","Is a cat. Is a fish. Wears a hat.",16645,1,5,0.0048],["BB",211,8.5125,10,"bay","eel","Sleepy BB Eel","#ff6b6b","Very shy. Then very not.",16497,2,4,0.0024],["AZTEC",144,0.020723,3,"bay","clown","Wiggly AZTEC Clownfish","#a9e34b","Bites when you least expect it.",15253,0,6,0.0024],["SHEIN",230,4.5734,5,"pier","catfish","Chonky SHEIN Catfish","#3bc9db","Very shy. Then very not.",14305,2,4,0.0011],["RKLB",186,64.75,10,"pier","catfish","Sleepy RKLB Catfish","#ff8787","Only comes out at market open.",13172,4,2,0.0011],["HYUNDAIUSD",160,238.382,10,"pier","catfish","Sleepy Hyundai Catfish","#748ffc","Eats liquidity for breakfast.",12739,3,3,0.0011],["0G",84,0.256,3,"bay","tuna","0G McFinface","#ffa94d","Eats liquidity for breakfast.",11692,2,4,0.0024],["NMR",74,12.5404,3,"open","tuna","Sleepy NMR Tuna","#ff6b6b","Swims in circles. Like the chart.",11271,2,4,0.0025],["AUDUSD",106,0.70082,25,"gold","crab","Aussie Crab","#00843d","Swims upside down.",10162,1,5,0.0007],["DYDX",62,0.13553,5,"bay","swordfish","dYdX Dart","#6966ff","Derivative of a swordfish.",10149,1,5,0.0024],["BOT",185,26.891,3,"bayou","octopus","Robo-topus","#9ca3af","Beep boop, glub glub.",9907,3,3,0.0048],["ZHIPU",205,75.27,10,"abyss","jelly","Sparkly ZHIPU Jelly","#748ffc","Will absolutely wreck your bait.",9878,4,2,0.0032],["DASH",127,50.715,10,"reef","crab","Wiggly DASH Crab","#69db7c","Loves a good short squeeze.",8896,3,3,0.0018],["OURA",4096,48.845,5,"pier","shark","Disco OURA Shark","#f783ac","Eats liquidity for breakfast.",7428,3,3,0.0011],["IWM",153,277.67,10,"pier","catfish","Baron von IWM Catfish","#69db7c","Very shy. Then very not.",6610,4,2,0.0011],["RAIL",184,2.915,3,"pier","shark","Captain RAIL Shark","#ff6b6b","Very shy. Then very not.",6596,2,4,0.0011],["ZORA",53,0.006825,3,"bay","jelly","Zora Coin-Jelly","#3399ff","Every post is a fish.",6403,0,6,0.0024],["AVNT",82,0.12729,5,"bay","tuna","Baron von AVNT Tuna","#38d9a9","Loves a good short squeeze.",6008,1,5,0.0024],["KAITO",33,0.309,5,"bay","tuna","KAITO McFinface","#69db7c","Very shy. Then very not.",5747,1,5,0.0024],["STBL",85,0.02284,3,"bay","eel","STBL-a-saurus Eel","#748ffc","Eats liquidity for breakfast.",5623,1,5,0.0024],["CRO",73,0.05962,3,"reef","jelly","Captain CRO Jelly","#da77f2","Bites when you least expect it.",5274,1,5,0.0018],["US10Y",227,95.59,20,"pier","shark","Sparkly US10Y Shark","#f783ac","Swims in circles. Like the chart.",5141,4,2,0.0011],["MINIMAX",199,26.832,10,"abyss","jelly","Sleepy Minimax Jelly","#69db7c","Only comes out at market open.",5110,3,3,0.0032],["LINEA",76,0.002999,3,"bay","clown","Professor LINEA Clownfish","#3bc9db","Has strong opinions about candles.",4826,0,6,0.0024],["NOW",191,138.87,5,"pier","swordfish","Baron von NOW Swordfish","#f783ac","Very shy. Then very not.",4678,4,2,0.0011],["PROVE",57,0.19152,3,"bay","tuna","Wiggly PROVE Tuna","#ff8787","Only comes out at market open.",4668,1,5,0.0024],["BMNR",123,23.578,10,"pier","koi","BMNR McFinface","#748ffc","Eats liquidity for breakfast.",4384,3,3,0.0011],["FOLKS",215,2.0327,3,"bay","clown","Big FOLKS Energy Clownfish","#ff8787","Very shy. Then very not.",3721,2,4,0.0024],["GMX",61,8.6023,5,"bay","shark","GMX Hammerhead","#2d42fc","Hammers liquidity.",3710,2,4,0.0024],["WEN",214,6.3707,10,"bayou","jelly","Wen Lambo Jelly","#ffb4a2","Wen? Soon.",3242,2,4,0.0048],["BERA",20,0.23076,5,"bay","blobfish","Bera Blobfish","#814625","Bear, but make it a fish.",3066,1,5,0.0024],["UNITREE",220,63.589,5,"pier","tuna","Disco Unitree Tuna","#748ffc","Bites when you least expect it.",2960,3,3,0.0011],["POPCAT",23,0.04604,10,"bayou","catfish","Pop Catfish","#ff6b9d","Opens mouth. Pops.",2444,1,5,0.0048],["1000FLOKI",19,0.025702,5,"bayou","eel","Floki the Viking Eel","#d4a373","Raids your margin at dawn.",2181,0,6,0.0048],["EDGE",157,0.33151,3,"bay","eel","Sir EDGE the Eel","#da77f2","Bites when you least expect it.",2116,1,5,0.0024],["ASML",151,1714.1,10,"pier","koi","Captain ASML Koi","#ff6b6b","Swims in circles. Like the chart.",1467,5,1,0.0011],["ROBO",149,0.007402,3,"pier","eel","Lil' ROBO Eel","#ff6b6b","Only comes out at market open.",1426,0,6,0.0011],["TENCENT",201,54.531,10,"pier","tuna","Grumpy Tencent Tuna","#ff6b6b","Very shy. Then very not.",1048,3,3,0.0011],["1000NOT",172,0.44897,3,"bayou","jelly","Not a Jellyfish","#9b8cff","It is, though.",1002,1,5,0.0048],["2Z",88,0.03481,3,"bay","eel","Professor 2Z Eel","#ffd43b","Eats liquidity for breakfast.",774,1,5,0.0024],["GEV",218,1009.9,10,"pier","koi","Sir GEV the Koi","#da77f2","Rumoured to be a whale in disguise.",651,5,1,0.0011],["FF",87,0.11607,3,"bay","tuna","Wiggly FF Tuna","#69db7c","Allergic to stop losses.",585,1,5,0.0024],["AXS",131,1.1461,5,"bay","koi","AXS-a-saurus Koi","#ff6b6b","Will absolutely wreck your bait.",572,2,4,0.0024],["STABLE",118,0.026998,3,"bay","eel","Lil' Stable Eel","#748ffc","Loves a good short squeeze.",571,0,6,0.0024],["BIO",171,0.02768,3,"pier","shark","Disco BIO Shark","#38d9a9","Only comes out at market open.",490,0,6,0.0011],["APEX",86,0.24187,5,"lagoon","angler","Lil' APEX Angler","#ff8787","Has strong opinions about candles.",320,1,5,0.003],["CTR",183,0.01447,3,"pier","swordfish","Chonky CTR Swordfish","#3bc9db","Loves a good short squeeze.",240,1,5,0.0011],["SMIC",202,7.0484,10,"pier","koi","SMIC-a-saurus Koi","#3bc9db","Eats liquidity for breakfast.",112,2,4,0.0011],["BE",196,266.0,10,"pier","koi","Wiggly BE Koi","#3bc9db","Has strong opinions about candles.",0,4,2,0.0011],["GME",176,27.6,10,"pier","puffer","GameStop Moon Puffer","#e01d2b","Apes together strong.",0,3,3,0.0011],["VARIATIONAL",4098,1.6701,5,"lagoon","jelly","Turbo Variational Jelly","#a9e34b","Allergic to stop losses.",0,2,4,0.003],["ARM",206,259.53,10,"pier","shark","Disco ARM Shark","#ff6b6b","Only comes out at market open.",0,4,2,0.0011],["KORU",226,14.599,10,"pier","shark","Captain KORU Shark","#38d9a9","Bites when you least expect it.",0,3,3,0.0011],["KIOXIA",225,95.19,10,"pier","koi","Baron von Kioxia Koi","#3bc9db","Allergic to stop losses.",0,4,2,0.0011],["AXTI",224,65.84,10,"pier","eel","AXTI-a-saurus Eel","#3bc9db","Only comes out at market open.",0,4,2,0.0011],["USDHKD",198,7.8483,20,"gold","crab","Sparkly Usdhkd Crab","#ffa94d","Eats liquidity for breakfast.",0,2,4,0.0007],["QCOM",209,177.72,10,"pier","shark","Professor QCOM Shark","#4dabf7","Allergic to stop losses.",0,4,2,0.0011],["BYD",200,2.9522,10,"pier","swordfish","BYD McFinface","#f783ac","Very shy. Then very not.",0,2,4,0.0011],["WDC",223,380.87,10,"pier","shark","Sir WDC the Shark","#4dabf7","Bites when you least expect it.",0,4,2,0.0011],["AAOI",207,99.39,10,"pier","shark","Big AAOI Energy Shark","#f783ac","Bites when you least expect it.",0,4,2,0.0011],["NOK",208,9.88,10,"pier","shark","Turbo NOK Shark","#ff8787","Only comes out at market open.",0,3,3,0.0011],["SOXS",222,36.99,10,"pier","tuna","Professor SOXS Tuna","#38d9a9","Eats liquidity for breakfast.",0,3,3,0.0011],["POPMART",204,19.042,10,"pier","tuna","Disco Popmart Tuna","#ff6b6b","Bites when you least expect it.",0,3,3,0.0011],["AVGO",210,358.68,10,"pier","catfish","Captain AVGO Catfish","#ffd43b","Will absolutely wreck your bait.",0,4,2,0.0011]];
+  const ROSTER = window.HL_ROSTER;   // game/markets.js
   // every Lighter perp ticker is a fish species with a silly name
   // row: [symbol, marketId, price, maxLev, zone, species, name, colour, quip, 24h volume, sizeDecimals, priceDecimals, simVol]
   const ART_FOR = k => 'f_' + k;   // Blender renders of each species
@@ -1195,58 +1195,9 @@
   window.HookLineVenues = { SimVenue, LighterVenue };
 
   /* ================= gear (bought with AX) ================= */
-  const RODS = [
-    { id: 'rod1', name: 'Bamboo Rod', lev: 2, price: 0, lvl: 1, desc: 'Gentle. Hard to get liquidated.' },
-    { id: 'rod2', name: 'Carbon Rod', lev: 5, price: 150, lvl: 1, desc: 'The everyday rod.' },
-    { id: 'rod4', name: 'Steel Rod', lev: 10, price: 400, lvl: 2, desc: 'Big moves both ways.' },
-    { id: 'rod3', name: 'Golden Rod', lev: 25, price: 1200, lvl: 5, desc: 'For people who know what they are doing.' },
-    { id: 'rod5', name: 'Kraken Rod', lev: 50, price: 3000, lvl: 8, desc: 'Legendary. The Kraken is always close.' },
-  ];
-  const KNIVES = [
-    { id: 'knife1', name: 'Rusty Knife', price: 0, lvl: 1, kind: 'fixed', fixed: -0.25, charges: 3, desc: 'Cuts at −25%. Dulls after 3 cuts.' },
-    { id: 'knife2', name: 'Fillet Knife', price: 200, lvl: 1, kind: 'adjust', charges: 8, desc: 'You choose where it cuts.' },
-    { id: 'knife3', name: 'Smart Knife', price: 500, lvl: 3, kind: 'trail', charges: 12, desc: 'Trailing stop: follows the fish up, cuts if it turns.' },
-    { id: 'knife4', name: 'Golden Knife', price: 900, lvl: 4, kind: 'half', charges: 12, desc: 'Cuts half the line at your stop, keeps fighting with the rest.' },
-    { id: 'knife5', name: 'Kraken Blade', price: 1500, lvl: 6, kind: 'adjust', charges: Infinity, desc: 'Never dulls. You choose where it cuts.' },
-  ];
-  const NETS = [
-    { id: 'net0', art: null, name: 'No net', price: 0, tp: null, desc: 'Close winners by hand.' },
-    { id: 'net1', art: 'net', name: 'Keeper Net', price: 250, lvl: 1, tp: 0.5, desc: 'Scoops winners at +50%.' },
-    { id: 'net2', art: 'net', name: 'Big Net', price: 600, lvl: 3, tp: 'adjust', desc: 'You choose the target.' },
-  ];
-  const SONARS = [
-    { lvl: 0, name: 'No sonar', price: 0, desc: 'Every fish is a mystery.' },
-    { lvl: 1, name: 'Sonar I', price: 150, desc: 'Shows the market.' },
-    { lvl: 2, name: 'Sonar II', price: 450, desc: 'Shows market and long/short.' },
-    { lvl: 3, name: 'Sonar III', price: 1000, desc: 'Adds the market\'s momentum.' },
-  ];
-  const CHESTS = [
-    { id: 'chest1', name: 'Tin Bucket', slots: 2, price: 0, lvl: 1 },
-    { id: 'chest2', name: 'Cooler', slots: 4, price: 300, lvl: 1 },
-    { id: 'chest3', name: 'Iron Chest', slots: 6, price: 800, lvl: 3 },
-    { id: 'chest4', name: 'Golden Vault', slots: 10, price: 2000, lvl: 5 },
-  ];
-  const BOATS = [
-    { id: 'boat', art: 'b2_row', name: 'Rowboat', price: 0, lvl: 1, speed: 10, turn: 2.8, grip: 1, slots: 0, desc: 'Steady and free. Every angler starts here.' },
-    { id: 'boat_speed', art: 'b2_speed', name: 'Speedboat', price: 600, lvl: 2, speed: 15, turn: 3.5, grip: 1.3, slots: 0, desc: 'First to every hot zone. Red fish yank it around.' },
-    { id: 'boat_trawler', art: 'b2_trawler', name: 'Trawler', price: 1500, lvl: 3, speed: 8, turn: 2.0, grip: 0.4, slots: 2, desc: 'Holds 2 extra fish. Barely moves when one turns red.' },
-  ];
-  // ---- the catch economy ----
-  // Green fish you pull in go in your cooler; cut losers leave scraps. Sell fish to the Harbor Treasury for AX
-  // (in production the treasury is topped up from HookLine's trading fees), or craft them into bait.
-  // Bait never touches the trade itself: it changes bites, shinies, XP and what the fish sells for.
-  const BAITS = [
-    { id: 'worm', name: 'Lucky Worm', icon: '🪱', desc: 'The fish it catches sells for +50% AX.', recipe: { scraps: 3 }, price: 40 },
-    { id: 'chum', name: 'Chum Bucket', icon: '🪣', desc: 'Quick bites, no fake-outs, a longer strike window.', recipe: { fish: 1, scraps: 1 }, price: 60 },
-    { id: 'glitter', name: 'Glitter Bait', icon: '✨', desc: 'Much better odds of a shiny.', recipe: { fish: 2 }, price: 90 },
-    { id: 'grub', name: 'Golden Grub', icon: '🐛', desc: 'Double XP, and the fish sells for double.', recipe: { fish: 3 }, price: 160 },
-  ];
-  const DAILY_BUYBACK = 600, COOLER_MAX = 40;
-  const TIERS = [{ n: 'Common', m: 1, c: '#9ad8ee' }, { n: 'Uncommon', m: 1.5, c: '#3ddc97' }, { n: 'Rare', m: 2.2, c: '#5fb4ff' }, { n: 'Legendary', m: 3.5, c: '#ffd23f' }];
-  const RARITY = {}; MK_IDS.slice().sort((a, b) => MARKETS[b].w - MARKETS[a].w).forEach((m, i, a) => { const q = i / a.length; RARITY[m] = q < 0.35 ? 0 : q < 0.7 ? 1 : q < 0.92 ? 2 : 3; });
-  const fishValue = f => Math.round((10 + Math.max(0, f.usd || 0) * 4 + Math.max(0, f.pct) * 40) * TIERS[RARITY[f.mk] ?? 0].m * (f.shiny ? 3 : 1) * (f.bait === 'worm' ? 1.5 : f.bait === 'grub' ? 2 : 1));
+  // gear, bait, rarity and prices live in game/economy.js, shared with the server (which has the final say)
+  const { RODS, KNIVES, NETS, SONARS, CHESTS, BOATS, BAITS, LURE_PRICE, SHARPEN_PRICE, DAILY_BUYBACK, COOLER_MAX, TIERS, RARITY, fishValue } = window.HL_ECON;
   const COATS = ['#2f6fc0', '#e8443a', '#2fae6a', '#8a4fd8', '#f29a1a', '#1d2b3a'];
-  const LURE_PRICE = 300, SHARPEN_PRICE = 25;
 
   const LAKES = [
     { id: 'lagoon', name: 'Coral Lagoon', bg: 'bg', mk: ['BTC', 'ETH', 'SOL'], mood: 'Majors', cls: '', sky: ['#5fcdf0', '#c4f4fb'] },
@@ -1278,7 +1229,75 @@
   if (!SAVE || !SAVE.eq) SAVE = DEFAULT_SAVE();
   for (const k of Object.keys(SAVE.dex || {})) if (!MARKETS[k]) delete SAVE.dex[k];
   if (SAVE.best && !MARKETS[SAVE.best.mk]) SAVE.best = null;
-  const persist = () => { try { localStorage.setItem('hookline-lighter-v1', JSON.stringify(SAVE)); } catch (_) { } };
+  const persist = () => { try { localStorage.setItem('hookline-lighter-v1', JSON.stringify(SAVE)); } catch (_) { } if (typeof syncProfile === 'function') syncProfile(); };
+  /* ---------- your account (server/accounts.js) ----------
+     Everyone has one: a guest account the moment the game opens, upgraded in place when you sign in with Privy.
+     AX, gear, the cooler and bait change through econ(): the result is predicted here with the shared rulebook
+     (game/economy.js) so the game feels instant, then the server's answer replaces it. If the server can't be
+     reached the game keeps working on this device and says so. */
+  const HAD_SAVE = (() => { try { return !!localStorage.getItem('hookline-lighter-v1'); } catch (_) { return false; } })();
+  const ACC = { token: null, id: null, kind: 'local', online: false, treasury: null, mode: 'demo', pending: 0, chain: Promise.resolve() };
+  const TOKEN_KEY = 'hookline-session-v1';
+  const PROFILE_KEYS = ['nick', 'coat', 'lvl', 'xp', 'tut', 'dex', 'quests', 'qday', 'trophies', 'best', 'stop', 'trail', 'tp', 'bait', 'voiceOff', 'strikeTip', 'towTip', 'reelTip', 'tips', 'hintSeen', 'paper', 'usd', 'real', 'onboarded', 'seedPos'];
+  const profileOf = () => { const o = {}; for (const k of PROFILE_KEYS) if (SAVE[k] !== undefined) o[k] = SAVE[k]; return o; };
+  const econOf = () => { const e = HL_ECON.pick(SAVE); for (const k in e.charges || {}) if (e.charges[k] === Infinity || e.charges[k] === null) e.charges[k] = -1; return e; };
+  function fixCharges() { for (const k in SAVE.charges || {}) if (SAVE.charges[k] === -1 || SAVE.charges[k] === null) SAVE.charges[k] = Infinity; }
+  async function api(path, body, method) {
+    const r = await fetch(path, { method: method || (body ? 'POST' : 'GET'), headers: { 'content-type': 'application/json', ...(ACC.token ? { authorization: 'Bearer ' + ACC.token } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({ ok: false, error: 'bad answer from server' }));
+    if (r.status === 401 && ACC.token) { ACC.token = null; try { localStorage.removeItem(TOKEN_KEY); } catch (_) { } }
+    return j;
+  }
+  function applyEcon(e) { if (!e) return; for (const k of HL_ECON.KEYS) if (e[k] !== undefined) SAVE[k] = e[k]; fixCharges(); try { localStorage.setItem('hookline-lighter-v1', JSON.stringify(SAVE)); } catch (_) { } }
+  function applyAccount(a, fresh) {
+    if (!a) return; ACC.id = a.id; ACC.kind = a.kind; ACC.mode = a.mode || 'demo'; ACC.email = a.email || null;
+    applyEcon(a.econ);
+    const pr = a.profile || {};
+    // the server's profile wins unless this device is further along (an offline session)
+    if (fresh || (pr.xp ?? -1) >= (SAVE.xp || 0) || (pr.lvl || 0) > (SAVE.lvl || 0)) { for (const k of PROFILE_KEYS) if (pr[k] !== undefined) SAVE[k] = pr[k]; }
+    if (a.nick) SAVE.nick = a.nick; if (a.coat) SAVE.coat = a.coat;
+    try { localStorage.setItem('hookline-lighter-v1', JSON.stringify(SAVE)); } catch (_) { }
+  }
+  async function accountBoot() {
+    try { ACC.token = localStorage.getItem(TOKEN_KEY); } catch (_) { }
+    try {
+      const first = !ACC.token;
+      const r = await api('/api/session', first ? { import: HAD_SAVE ? econOf() : null, profile: profileOf() } : {});
+      if (!r.ok && ACC.token === null && !first) return accountBoot();   // the old session expired: start over
+      if (!r.ok) throw new Error(r.error || 'no session');
+      if (r.token) { ACC.token = r.token; try { localStorage.setItem(TOKEN_KEY, r.token); } catch (_) { } }
+      applyAccount(r.account, false); ACC.treasury = r.treasury; ACC.online = true;
+    } catch (e) { ACC.online = false; console.info('[HookLine] account server unreachable, playing on this device only:', e.message); }
+    renderAll(); if (S.tab === 'market') renderMarket();
+  }
+  // every AX movement: predict now, let the server decide
+  function econ(action, args = {}) {
+    const r = HL_ECON.apply(SAVE, action, args, { lvl: SAVE.lvl }); fixCharges();
+    if (!r.ok) return r;
+    try { localStorage.setItem('hookline-lighter-v1', JSON.stringify(SAVE)); } catch (_) { }
+    if (ACC.online && ACC.token) {
+      ACC.pending++;
+      ACC.chain = ACC.chain.then(() => api('/api/econ', { action, args })).then(res => {
+        ACC.pending--; if (res.treasury) ACC.treasury = res.treasury;
+        if (!res.ok && res.error) toast(res.error[0].toUpperCase() + res.error.slice(1) + '.', 'warn');
+        if (ACC.pending === 0 && res.econ) { applyEcon(res.econ); renderAll(); if (S.tab === 'market') renderMarket(); }
+      }).catch(() => { ACC.pending = Math.max(0, ACC.pending - 1); });
+    }
+    return r;
+  }
+  let profT = null;
+  function syncProfile() { if (!ACC.online || !ACC.token) return; clearTimeout(profT); profT = setTimeout(() => api('/api/profile', { profile: profileOf() }, 'PUT').catch(() => { }), 1500); }
+  // signing in with Privy: hand the server Privy's access token; a returning player gets their account back
+  async function linkPrivy() {
+    const auth = window.HookLineAuth; if (!ACC.online || !auth || !auth.getAccessToken) return null;
+    const tok = await auth.getAccessToken().catch(() => null); if (!tok) return null;
+    const u = auth.getUser && auth.getUser();
+    const r = await api('/api/auth/privy', { token: tok, email: u && u.email });
+    if (!r.ok) { toast(r.error || 'Could not link your sign-in.', 'warn'); return null; }
+    if (r.token) { ACC.token = r.token; try { localStorage.setItem(TOKEN_KEY, r.token); } catch (_) { } }
+    applyAccount(r.account, !!r.switched); ACC.treasury = r.treasury || ACC.treasury; renderAll();
+    return r;
+  }
   const xpFor = l => Math.round(120 * Math.pow(l, 1.45));
   const rod = () => RODS.find(r => r.id === SAVE.eq.rod);
   const knife = () => KNIVES.find(k => k.id === SAVE.eq.knife);
@@ -2066,9 +2085,8 @@
   const LOOT = [
     { t: 'Message in a bottle: +40 XP', f: () => addXp(40) },
     { t: 'Barnacle-free hull: boost refilled', f: () => { ME.boost = 1; } },
-    { t: 'Sharpened knife: +1 charge', f: () => { const k = knife(); if (SAVE.charges[k.id] !== Infinity) SAVE.charges[k.id] = Math.min(k.charges, (SAVE.charges[k.id] || 0) + 1); } },
     { t: 'Lucky lure: next cast 3× shiny odds', f: () => { S.lucky = true; } },
-    { t: 'Treasure map: +25 AX', f: () => { SAVE.ax += 25; } },
+    { t: 'Treasure map: +25 AX', f: () => { econ('treasure'); } },
     { t: 'Paper bait stash: +$250 practice money', f: () => { SAVE.paper += 250; } },
   ];
   function makeBottle() {
@@ -2370,8 +2388,8 @@
     let spec;
     if (S.target && SAVE.sonar >= 1 && S.target.zone === zn) spec = { ...S.target.spec };
     else { const pool = realMode() && !zn.practice ? zn.mk.filter(m => (!venue.broker.markets || venue.broker.markets.has(m)) && !S.positions.some(p => p.real && p.market === m)) : zn.mk; const mk = S.lure && pool.includes(S.lure) && Math.random() < 0.7 ? S.lure : weightedPick(pool.length ? pool : zn.mk); spec = { market: mk, side: Math.random() < 0.5 ? 1 : -1, shiny: Math.random() < (S.perfect ? 0.2 : 0.06) * (zn === S.frenzyZone ? 3 : 1) * (S.lucky ? 3 : 1) }; S.lucky = false; }
-    const bt0 = SAVE.baitEq && SAVE.baits[SAVE.baitEq] > 0 ? SAVE.baitEq : null;
-    if (bt0) { SAVE.baits[bt0]--; spec.bait = bt0; if (bt0 === 'glitter' && !spec.shiny && Math.random() < 0.22) spec.shiny = true; if (!SAVE.baits[bt0]) { SAVE.baitEq = null; toast(`Last ${BAITS.find(b => b.id === bt0).name} on the hook. Craft more in the Market.`); } persist(); }
+    const ub = SAVE.baitEq && SAVE.baits[SAVE.baitEq] > 0 ? econ('useBait') : null, bt0 = ub && ub.ok ? ub.out.id : null;
+    if (bt0) { spec.bait = bt0; if (bt0 === 'glitter' && !spec.shiny && Math.random() < 0.22) spec.shiny = true; if (!SAVE.baits[bt0]) { toast(`Last ${BAITS.find(b => b.id === bt0).name} on the hook. Craft more in the Market.`); } persist(); }
     if (S.perfect) addXp(10); S.perfect = false;
     const dist = 4.5 + power * 10; S.castPower = power;
     const tx = S.target && S.target.zone === zn ? S.target.obj.position.x : ME.x + Math.cos(ME.h) * dist;
@@ -2512,9 +2530,9 @@
       if (res.fraction >= 1) S.streak = 0;
       if (isActive) { S.mode = 'snap'; S.mt = 0; S.snapFrom = S.fishObj ? S.fishObj.position.clone() : null; }
       say('cut', true); snip(m.knife || 'knife1'); S.lastEv = { k: 'cut', mk: p.market, t: Date.now() };
-      if (res.reason === 'stop' && SAVE.charges[m.knife] !== Infinity && SAVE.charges[m.knife] > 0) SAVE.charges[m.knife]--;
+      if (res.reason === 'stop') econ('knifeUse', { id: m.knife });
       if (pct > -0.2 && pct < 0) quest('cut', 1);
-      if (!p.practice && res.fraction >= 1) { SAVE.scraps++; setTimeout(() => toast('+1 scrap for the Bait Shack. 3 scraps make a Lucky Worm.'), 1200); }
+      if (!p.practice && res.fraction >= 1) { econ('catch', { mk: p.market, pct: -1 }); setTimeout(() => toast('+1 scrap for the Bait Shack. 3 scraps make a Lucky Worm.'), 1200); }
       if (res.fraction < 1) { m.halved = true; m.stop -= 0.15; const live = venue.positions.get(p.id); if (live) armKnife(live, m); }
       pop(mk.fish, res.fraction < 1 ? 'Half the line cut' : 'Line cut', `${p.market} ${fmtSigned(res.pnl)} (${fmtPct(pct)}) · ${fmtUSD(res.returned)} back`, 'lose');
       addXp(pct > -0.2 ? 15 : 5);
@@ -2529,9 +2547,8 @@
       pop(mk.fish, title, `${p.market} ${fmtSigned(res.pnl)} (${fmtPct(pct)}) · ${fmtUSD(res.returned)} back`, win ? 'win' : 'lose');
       addXp((win ? 20 + Math.round(Math.min(pct, 3) * 40) : 5) * (win && m.bait === 'grub' ? 2 : 1));
       if (win && !p.practice) {
-        const notional = p.margin * res.fraction * p.leverage, item = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), mk: p.market, side: p.side, lev: p.leverage, pct, usd: +res.pnl.toFixed(2), kg: +(notional / 10 * (1 + Math.min(pct, 3))).toFixed(1), shiny: !!m.shiny, bait: m.bait || null, real: !!p.real, t: Date.now() };
-        SAVE.cooler.unshift(item); if (SAVE.cooler.length > COOLER_MAX) SAVE.cooler.length = COOLER_MAX;
-        setTimeout(() => toast(`${mk.name} (${item.kg} kg) is in your cooler · worth ${fishValue(item)} AX at the Market`, 'good'), 1800); $('#mk-dot').hidden = false;
+        const r = econ('catch', { mk: p.market, side: p.side, lev: p.leverage, margin: p.margin * res.fraction, pct, usd: +res.pnl.toFixed(2), shiny: !!m.shiny, bait: m.bait || null, real: !!p.real });
+        if (r.ok && r.out.fish) { const item = r.out.fish; setTimeout(() => toast(`${mk.name} (${item.kg} kg) is in your cooler · worth ${r.out.value} AX at the Market`, 'good'), 1800); $('#mk-dot').hidden = false; }
       }
       if (win && (!SAVE.best || pct > SAVE.best.pct)) SAVE.best = { mk: p.market, pct };
       if (win) { SAVE.trophies = [...(SAVE.trophies || []), { mk: p.market, pct, t: Date.now() }].sort((a, b) => b.pct - a.pct).slice(0, 5); }
@@ -2571,7 +2588,7 @@
     $('#lv-title').textContent = `Level ${l}!`;
     $('#lv-unlock').innerHTML = unlocks.length ? `${img(unlocks[0].id.startsWith('net') ? 'net' : unlocks[0].id)}<span></span>` : `${img('coin')}<span></span>`;
     $('#lv-unlock span').textContent = unlocks.length ? `${unlocks.map(u => u.name).join(', ')} now in the shop` : '+50 AX';
-    if (!unlocks.length) SAVE.ax += 50;
+    econ('levelReward', { lvl: l });
     $('#o-level').hidden = false; SFX.level(); persist(); renderAll();
   }
   function quest(id, inc, set) {
@@ -2580,35 +2597,14 @@
     if (q.prog >= q.goal && before < q.goal) setTimeout(() => toast(`Quest complete: ${q.text}. Claim it in Quests.`, 'good'), 1600);
   }
   // daily quests: a fresh set every UTC day, picked deterministically so it is the same for everyone
-  const QUEST_POOL = [
-    { id: 'land', text: n => `Land ${n} fish`, n: [3, 5, 8], reward: 60, icon: 'f_tuna' },
-    { id: 'win', text: n => `Close ${n} fish in profit`, n: [1, 2, 3], reward: 80, icon: 'net' },
-    { id: 'cut', text: () => 'Cut a loser before −20%', n: [1], reward: 80, icon: 'knife2' },
-    { id: 'newsp', text: n => `Discover ${n} new species`, n: [1, 2, 3], reward: 90, icon: 'book' },
-    { id: 'frenzy', text: n => `Hook ${n} fish in a Frenzy zone`, n: [1, 2], reward: 100, icon: 'star' },
-    { id: 'perfect', text: n => `Make ${n} PERFECT casts`, n: [2, 3], reward: 70, icon: 'rod2' },
-    { id: 'podium', text: () => 'Finish a round in the top 3', n: [1], reward: 120, icon: 'trophy' },
-    { id: 'shiny', text: () => 'Hook a shiny fish ✦', n: [1], reward: 150, icon: 'star' },
-    { id: 'rings', text: () => 'Chain 3 speed rings', n: [1], reward: 70, icon: 'bolt' },
-    { id: 'trick', text: n => `Land ${n} spin tricks`, n: [1, 2], reward: 70, icon: 'star' },
-    { id: 'loot', text: n => `Find ${n} message bottles`, n: [2, 3], reward: 60, icon: 'bubble' },
-    { id: 'hold', text: n => `Hold ${n} fish at once`, n: [2, 3], reward: 90, icon: 'chest2' },
-    { id: 'zone_bayou', text: n => `Hook ${n} fish in Meme Bayou`, n: [2, 3], reward: 70, icon: 'f_puffer' },
-    { id: 'zone_pier', text: n => `Hook ${n} stocks off Wall St. Pier`, n: [2, 3], reward: 70, icon: 'f_shark' },
-    { id: 'zone_abyss', text: n => `Hook ${n} fish in the AI Abyss`, n: [1, 2], reward: 80, icon: 'f_octopus' },
-    { id: 'zone_gold', text: n => `Hook ${n} fish on the Gold Coast`, n: [2], reward: 70, icon: 'f_sunfish' },
-  ];
   function rollQuests() {
-    const day = Math.floor(Date.now() / 864e5); if (SAVE.qday === day) return;
-    let seed = day * 9301 + 49297; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
-    const pool = QUEST_POOL.slice(), out = [];
-    while (out.length < 4) { const q = pool.splice(Math.floor(rnd() * pool.length), 1)[0]; const n = q.n[Math.floor(rnd() * q.n.length)]; out.push({ id: q.id, text: q.text(n), goal: n, prog: 0, reward: q.reward + (n - 1) * 20, icon: q.icon }); }
-    SAVE.quests = out; SAVE.qday = day; persist();
+    const day = HL_ECON.dayNum(); if (SAVE.qday === day) return;
+    SAVE.quests = HL_ECON.questsForDay(day); SAVE.qday = day; persist();
   }
   rollQuests();
   function claim(id) {
     const q = SAVE.quests.find(x => x.id === id); if (!q || q.claimed || q.prog < q.goal) return;
-    q.claimed = true; SAVE.ax += q.reward; SFX.coin(); toast(`+${q.reward} AX`, 'good'); persist(); renderAll();
+    const r = econ('claimQuest', { id }); if (!r.ok) { toast(r.err, 'warn'); return; } q.claimed = true; SFX.coin(); toast(`+${q.reward} AX`, 'good'); persist(); renderAll();
   }
 
   /* ================= driving ================= */
@@ -3309,17 +3305,15 @@
   }
   function buy(slot, id) {
     const pool = { rod: RODS, knife: KNIVES, net: NETS, chest: CHESTS, boat: BOATS }[slot];
-    if (slot === 'sonar') { const s = SONARS[+id]; if (SAVE.ax < s.price) return; SAVE.ax -= s.price; SAVE.sonar = s.lvl; }
-    else if (slot === 'lures') { if (SAVE.ax < LURE_PRICE) return; SAVE.ax -= LURE_PRICE; SAVE.lures = true; }
+    if (slot === 'sonar') { if (!econ('sonar', { lvl: SONARS[+id].lvl }).ok) return; }
+    else if (slot === 'lures') { if (!econ('lures').ok) return; }
     else {
-      const it = pool.find(x => x.id === id); if (!it || SAVE.ax < it.price || (it.lvl && SAVE.lvl < it.lvl)) return;
-      SAVE.ax -= it.price; SAVE.owned[id] = 1; SAVE.eq[slot] = id;
-      if (slot === 'knife') SAVE.charges[id] = it.charges;
+      const r = econ('buy', { slot, id }); if (!r.ok) { toast(r.err[0].toUpperCase() + r.err.slice(1) + '.', 'warn'); return; }
       if (slot === 'boat') swapBoat();
     }
     SFX.coin(); toast('Bought with AX and equipped.', 'good'); persist(); renderAll();
   }
-  function equip(slot, id) { if (slot === 'sonar') SAVE.sonar = +id; else SAVE.eq[slot] = id; if (slot === 'boat') swapBoat(); persist(); renderAll(); }
+  function equip(slot, id) { if (slot === 'sonar') econ('sonar', { lvl: +id }); else econ('equip', { slot, id }); if (slot === 'boat') swapBoat(); persist(); renderAll(); }
   function swapBoat() {
     if (!S.me) return;
     const old = S.me; scene.remove(old.group); scene.remove(old.wake.m); S.sink = 0;
@@ -3356,13 +3350,19 @@
     const an = e.target.closest('[data-angler]'); if (an) { ONB.angler = +an.dataset.angler; const a = ANGLERS[ONB.angler]; SAVE.coat = a.c; swapBoat(); renderAnglers(); SFX.init(); SFX.tone(880, 0.06, 'triangle', 0.15); return; }
     const rb = e.target.closest('[data-onbrod]'); if (rb) { ONB.rod = rb.dataset.onbrod; renderRods(); SFX.tone(740, 0.06, 'triangle', 0.15); return; }
     const go = e.target.closest('[data-onbgo]'); if (!go) return; const k = go.dataset.onbgo; SFX.init();
-    if (k === 'login') { const api = realApi(); if (api) { try { go.textContent = 'Signing in…'; await api.login(); const st = await api.status(); renderReal(st); } catch (err) { go.textContent = 'SIGN IN'; toast(err.message || 'Sign-in was cancelled.', 'warn'); return; } } onbStep(1); }
+    if (k === 'login') {
+      const api = realApi(); let linked = null;
+      if (api) { try { go.textContent = 'Signing in…'; await api.login(); const st = await api.status(); renderReal(st); linked = await linkPrivy(); } catch (err) { go.textContent = 'SIGN IN'; toast(err.message || 'Sign-in was cancelled.', 'warn'); return; } }
+      if (linked && linked.switched && SAVE.onboarded) { swapBoat(); showOnboarding(false); renderSail(); toast(`Welcome back, ${SAVE.nick || 'angler'}! Your gear and catch are right where you left them.`, 'good'); return; }
+      if (SAVE.nick) { ONB.nickTyped = true; $('#onb-nick').value = SAVE.nick; }
+      onbStep(1);
+    }
     else if (k === 'guest') onbStep(1);
     else if (k === 'angler') { const nick = $('#onb-nick').value.trim().slice(0, 18) || ANGLERS[ONB.angler].n; SAVE.nick = nick; ME.nick = nick; SAVE.coat = ANGLERS[ONB.angler].c; const ni = $('#sail-nick'); if (ni) ni.value = nick; persist(); onbStep(2); }
     else if (k === 'rod') {
       const r = RODS.find(x => x.id === ONB.rod);
-      if (r.price && !SAVE.owned[r.id]) { if (SAVE.ax < r.price) return; SAVE.ax -= r.price; SAVE.owned[r.id] = 1; SFX.coin(); toast(`${r.name} bought for ${r.price} AX`, 'good'); }
-      SAVE.eq.rod = r.id; SAVE.onboarded = true; persist(); renderAll(); showOnboarding(false); renderSail();
+      if (r.price && !SAVE.owned[r.id]) { if (!econ('buy', { slot: 'rod', id: r.id }).ok) return; SFX.coin(); toast(`${r.name} bought for ${r.price} AX`, 'good'); }
+      else econ('equip', { slot: 'rod', id: r.id }); SAVE.onboarded = true; persist(); renderAll(); showOnboarding(false); renderSail();
       $('#sail-who').textContent = `Fishing as ${ME.nick} · last step: pick your boat`;
     }
   });
@@ -3479,7 +3479,7 @@
     if (st.limits) { $('#real-lim-b').textContent = fmtUSD(st.limits.maxMargin, 0); $('#real-lim-l').textContent = st.limits.maxLev + '×'; }
     if (!$('#real-on').checked) $('#real-on').checked = !!SAVE.real; $('#real-open-t').textContent = st.signedIn ? (st.balance > 0 ? `${fmtUSD(st.balance)} on Lighter` : 'add funds') : 'sign in & add funds';
   }
-  async function realLogin() { const api = realApi(); if (!api) return; try { await api.login(); const st = await api.status(); renderReal(st); realStep(st.balance > 0 ? 2 : 1); } catch (e) { realErr(e.message || 'Sign-in was cancelled.'); } }
+  async function realLogin() { const api = realApi(); if (!api) return; try { await api.login(); await linkPrivy(); const st = await api.status(); renderReal(st); realStep(st.balance > 0 ? 2 : 1); } catch (e) { realErr(e.message || 'Sign-in was cancelled.'); } }
   async function realFund(method) {
     const api = realApi(); if (!api) return; const pr = $('#real-progress'); pr.hidden = false; $('#real-pi').style.width = '10%';
     try {
@@ -3545,14 +3545,13 @@
     $('#lake-list').innerHTML = LAKES.map((l, i) => `<button class="lake-card ${l === S.lake ? 'on' : ''}" type="button" data-lake="${i}" style="background-image:url(art/${l.bg}.webp)"><span class="mood ${l.cls}">${l.mood}</span><h4>${l.name}${l === S.lake ? ' · here' : ''}</h4><div class="mks">${l.mk.slice(0, 4).map(m => `<span>${img(MARKETS[m].fish)}${m}</span>`).join('')}${l.mk.length > 4 ? `<span style="padding-left:8px">+${l.mk.length - 4}</span>` : ''}</div></button>`).join('');
   }
   function renderAll() { renderHud(); renderLoadout(); renderLive(); renderDex(); renderQuests(); if (S.tab === 'gear') renderGear(); if (S.tab === 'chest') renderTank(); if (S.tab === 'lakes') renderLakes(); }
-  const today = () => new Date().toISOString().slice(0, 10);
-  function buybackLeft() { if (SAVE.sold.day !== today()) SAVE.sold = { day: today(), ax: 0 }; return Math.max(0, DAILY_BUYBACK - SAVE.sold.ax); }
-  function canCraft(b) { const r = b.recipe; return (SAVE.scraps >= (r.scraps || 0)) && (SAVE.cooler.length >= (r.fish || 0)); }
+  function buybackLeft() { if (SAVE.sold.day !== HL_ECON.dayStr()) return DAILY_BUYBACK; return HL_ECON.buybackLeft(SAVE); }
+  const canCraft = b => HL_ECON.canCraft(SAVE, b);
   function recipeText(r) { return [r.fish ? `${r.fish} fish` : '', r.scraps ? `${r.scraps} scrap${r.scraps > 1 ? 's' : ''}` : ''].filter(Boolean).join(' + '); }
   function renderMarket() {
     $('#mk-dot').hidden = true;
-    const left = buybackLeft(), pool = (window.HOOKLINE_CONFIG && +window.HOOKLINE_CONFIG.treasuryAx) || 48210;
-    $('#mk-treasury').innerHTML = `<span class="ic">⚓</span><b>Harbor Treasury · ${pool.toLocaleString('en-US')} AX</b>
+    const left = buybackLeft(), pool = ACC.treasury ? ACC.treasury.ax : null;
+    $('#mk-treasury').innerHTML = `<span class="ic">⚓</span><b>Harbor Treasury${pool != null ? ` · ${pool.toLocaleString('en-US')} AX` : ''}</b>
       <small>Topped up by HookLine trading fees. It buys your fish every day, so a good catch pays twice: the trade, then the fish.</small>
       <div><div class="bar"><i style="width:${left / DAILY_BUYBACK * 100}%"></i></div><small>Your buyback today: ${left} of ${DAILY_BUYBACK} AX left · resets at midnight UTC</small></div>`;
     const c = SAVE.cooler;
@@ -3560,28 +3559,22 @@
     $('#mk-cooler').innerHTML = c.length ? c.map(f => { const mk = MARKETS[f.mk], tier = TIERS[RARITY[f.mk] ?? 0], v = fishValue(f);
       return `<div class="mk-item"><img src="art/${mk ? mk.fish : 'f_tuna'}.webp" alt=""><div><div class="nm">${f.shiny ? '✦ ' : ''}${esc(mk ? mk.name : f.mk)}<span class="tier" style="color:${tier.c}">${tier.n}</span></div>
         <div class="meta">${f.kg} kg · ${esc(f.mk)} ${f.side > 0 ? 'long' : 'short'} ${f.lev}× · ${fmtPct(f.pct)}${f.bait ? ` · ${BAITS.find(b => b.id === f.bait).icon}` : ''}</div></div>
-        <div class="acts"><button class="optbtn" type="button" data-sell="${f.id}" ${v > left ? 'disabled' : ''}>Sell ${img('coin')} ${v}</button></div></div>`; }).join('')
+        <div class="acts"><button class="optbtn" type="button" data-sell="${f.id}" ${v > left || ACC.pending ? 'disabled' : ''}>Sell ${img('coin')} ${v}</button></div></div>`; }).join('')
       : `<div class="mk-empty"><b>Your cooler is empty.</b><span>Pull in a green fish and it lands here. Cut lines leave scraps: you have ${SAVE.scraps}.</span></div>`;
     $('#mk-baits').innerHTML = `<div class="meta" style="font-size:12px;color:#b9d6ee">Scraps: <b>${SAVE.scraps}</b> · Fish in cooler: <b>${c.length}</b></div>` + BAITS.map(b => { const n = SAVE.baits[b.id] || 0, on = SAVE.baitEq === b.id;
       return `<div class="mk-item ${on ? 'on' : ''}"><span class="bi">${b.icon}</span><div><div class="nm">${b.name} <span class="tier">×${n}</span></div><div class="meta">${b.desc}<br>Craft: ${recipeText(b.recipe)}</div></div>
         <div class="acts"><button class="optbtn" type="button" data-craft="${b.id}" ${canCraft(b) ? '' : 'disabled'}>Craft</button><button class="optbtn" type="button" data-buybait="${b.id}" ${SAVE.ax < b.price ? 'disabled' : ''}>${img('coin')} ${b.price}</button>
         ${n ? `<button class="optbtn" type="button" data-usebait="${b.id}">${on ? 'On hook ✓' : 'Use'}</button>` : ''}</div></div>`; }).join('');
   }
-  function sellFish(id) {
-    const i = SAVE.cooler.findIndex(f => f.id === id); if (i < 0) return 0; const f = SAVE.cooler[i], v = fishValue(f);
-    if (v > buybackLeft()) { toast('The Harbor has spent today\'s buyback on you. Craft bait instead, or sell tomorrow.', 'warn'); return 0; }
-    SAVE.cooler.splice(i, 1); SAVE.ax += v; SAVE.sold.ax += v; return v;
-  }
   $('#s-market').addEventListener('click', e => {
-    const t = e.target.closest('button'); if (!t) return;
-    if (t.dataset.sell) { const v = sellFish(t.dataset.sell); if (v) { SFX.coin(); toast(`Sold for ${v} AX`, 'good'); } }
-    else if (t.id === 'mk-sellall') { let tot = 0; for (const f of SAVE.cooler.slice().sort((a, b) => fishValue(b) - fishValue(a))) { if (fishValue(f) > buybackLeft()) continue; tot += sellFish(f.id); } if (tot) { SFX.coin(); toast(`Sold your catch for ${tot} AX`, 'good'); } }
-    else if (t.dataset.craft) { const b = BAITS.find(x => x.id === t.dataset.craft); if (!canCraft(b)) return;
-      SAVE.scraps -= b.recipe.scraps || 0; if (b.recipe.fish) { SAVE.cooler.sort((x, y) => fishValue(y) - fishValue(x)); SAVE.cooler.splice(SAVE.cooler.length - b.recipe.fish, b.recipe.fish); }   // the cheapest fish go in the pot
-      SAVE.baits[b.id] = (SAVE.baits[b.id] || 0) + 1; if (!SAVE.baitEq) SAVE.baitEq = b.id; SFX.tone(784, 0.1, 'triangle', 0.2); SFX.tone(1175, 0.16, 'triangle', 0.2, null, 0.1); toast(`Crafted ${b.icon} ${b.name}`, 'good'); }
-    else if (t.dataset.buybait) { const b = BAITS.find(x => x.id === t.dataset.buybait); if (SAVE.ax < b.price) return; SAVE.ax -= b.price; SAVE.baits[b.id] = (SAVE.baits[b.id] || 0) + 1; if (!SAVE.baitEq) SAVE.baitEq = b.id; SFX.coin(); toast(`Bought ${b.icon} ${b.name}`, 'good'); }
-    else if (t.dataset.usebait) { SAVE.baitEq = SAVE.baitEq === t.dataset.usebait ? null : t.dataset.usebait; }
+    const t = e.target.closest('button'); if (!t || t.disabled) return; let r = null;
+    if (t.dataset.sell) { r = econ('sell', { id: t.dataset.sell }); if (r.ok) { SFX.coin(); toast(`Sold for ${r.out.ax} AX`, 'good'); } }
+    else if (t.id === 'mk-sellall') { r = econ('sellAll'); if (r.ok) { SFX.coin(); toast(`Sold ${r.out.n} fish for ${r.out.ax} AX`, 'good'); } }
+    else if (t.dataset.craft) { const b = BAITS.find(x => x.id === t.dataset.craft); r = econ('craft', { id: b.id }); if (r.ok) { SFX.tone(784, 0.1, 'triangle', 0.2); SFX.tone(1175, 0.16, 'triangle', 0.2, null, 0.1); toast(`Crafted ${b.icon} ${b.name}`, 'good'); } }
+    else if (t.dataset.buybait) { const b = BAITS.find(x => x.id === t.dataset.buybait); r = econ('buyBait', { id: b.id }); if (r.ok) { SFX.coin(); toast(`Bought ${b.icon} ${b.name}`, 'good'); } }
+    else if (t.dataset.usebait) r = econ('setBait', { id: SAVE.baitEq === t.dataset.usebait ? null : t.dataset.usebait });
     else return;
+    if (r && !r.ok) toast(r.err[0].toUpperCase() + r.err.slice(1) + '.', 'warn');
     persist(); renderAll(); renderMarket();
   });
   function setTab(tab) {
@@ -3649,7 +3642,7 @@
     const b = e.target.closest('[data-buy]'); if (b) { const [s, id] = b.dataset.buy.split(':'); buy(s, id); return; }
     const dm = e.target.closest('[data-dexmore]'); if (dm) { dexOpen[dm.dataset.dexmore] = !dexOpen[dm.dataset.dexmore]; renderDex(); return; }
     const q = e.target.closest('[data-equip]'); if (q) { const [s, id] = q.dataset.equip.split(':'); equip(s, id); return; }
-    const sh = e.target.closest('[data-sharpen]'); if (sh) { e.preventDefault(); const k = KNIVES.find(x => x.id === sh.dataset.sharpen); if (SAVE.ax < SHARPEN_PRICE) return; SAVE.ax -= SHARPEN_PRICE; SAVE.charges[k.id] = k.charges; SFX.snip(); toast(`${k.name} sharpened.`, 'good'); persist(); renderAll(); }
+    const sh = e.target.closest('[data-sharpen]'); if (sh) { e.preventDefault(); const k = KNIVES.find(x => x.id === sh.dataset.sharpen); if (!econ('sharpen', { id: k.id }).ok) return; SFX.snip(); toast(`${k.name} sharpened.`, 'good'); persist(); renderAll(); }
   });
   $('#quests').addEventListener('click', e => { const b = e.target.closest('[data-claim]'); if (b) claim(b.dataset.claim); });
   $('#lake-list').addEventListener('click', e => { const b = e.target.closest('[data-lake]'); if (b) switchLake(+b.dataset.lake); });
@@ -3698,11 +3691,12 @@
   $('#sail-prev').addEventListener('click', () => { sailIdx = (sailIdx + BOATS.length - 1) % BOATS.length; SFX.tone(660, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
-  $('#sail-go').addEventListener('click', () => { const b = BOATS[sailIdx]; if (!SAVE.owned[b.id]) { if (SAVE.ax < b.price || SAVE.lvl < b.lvl) return; SAVE.ax -= b.price; SAVE.owned[b.id] = 1; SAVE.eq.boat = b.id; SFX.coin(); persist(); renderAll(); renderSail(); return; } closeSail(); });
+  $('#sail-go').addEventListener('click', () => { const b = BOATS[sailIdx]; if (!SAVE.owned[b.id]) { if (!econ('buy', { slot: 'boat', id: b.id }).ok) return; SFX.coin(); persist(); renderAll(); renderSail(); return; } closeSail(); });
   window.HookLineDebug = { S, ME, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; }, endRound: () => endRound(), skipOnboarding: () => { SAVE.onboarded = true; persist(); showOnboarding(false); }, mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
 
   /* boot */
   (async () => {
+    const accP = accountBoot();   // your account loads while the world does
     await venue.connect();
     const feed = new LighterFeed(venue); venue.liveSubs = [() => { renderVenueBadge(); toast('Live Lighter prices connected. Fills are paper until a relay is linked.', 'good'); }]; feed.start(); S.feed = feed;
     S.positions = [...venue.positions.values()];
@@ -3715,6 +3709,7 @@
     buildWorld(); setupPost();
     for (let i = 0; i < 5; i++) S.gulls.push(makeGull());
     S.wpMesh = makeWaypoint(); makeRings(); makeBottles(); makeSchools();
+    await Promise.race([accP, new Promise(r => setTimeout(r, 3000))]);
     S.me = makeBoat(SAVE.coat || null, null, SAVE.eq.boat);
     S.line = makeLine(); S.line.visible = false;
     const bob = new THREE.Group();

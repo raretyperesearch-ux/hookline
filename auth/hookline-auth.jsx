@@ -1,7 +1,7 @@
 // HookLine sign-in island: Privy (Google / email) + an embedded EVM wallet, with no visible React UI of its own.
 // Built by build.mjs into ../game/hookline-auth/ (ES module + lazy chunks; game/hookline-real.js loads it).
 // The game never imports React: it only talks to
-//   window.HookLineAuth = { ready(), isReady(), error(), login(), logout(), getWallet(), getUser(), signMessage(msg),
+//   window.HookLineAuth = { ready(), isReady(), error(), login(), logout(), getWallet(), getUser(), getAccessToken(), signMessage(msg),
 //                           sendTransaction(tx, opts), depositFunds(opts), fundWallet(opts) }
 // The Privy app id comes from window.HOOKLINE_PRIVY_APP_ID (or <meta name="privy-app-id" content="...">).
 import React, { useEffect, useRef } from 'react';
@@ -77,6 +77,8 @@ const api = {
     return new Promise((resolve, reject) => { H.pendingLogin = { resolve, reject }; H.login(); });
   },
   async logout() { await readyP; try { await H.logout(); } catch (_) { } },
+  // Privy's access token (a short-lived ES256 JWT): the game server verifies it to tie your account to this login
+  async getAccessToken() { await readyP; if (!H.privy || !H.privy.authenticated || !H.privy.getAccessToken) return null; return H.privy.getAccessToken(); },
   getWallet() { const w = embedded(); return H.privy && H.privy.authenticated && w ? { address: w.address } : null; },
   getUser() {
     const u = H.privy && H.privy.user; if (!u || !H.privy.authenticated) return null;

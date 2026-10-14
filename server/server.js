@@ -5,6 +5,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { WebSocketServer } = require('ws');
+const accounts = require('./accounts');
 
 // the game itself is served from ../game so one service is the whole deployment
 const GAME_DIR = path.resolve(process.env.GAME_DIR || path.join(__dirname, '..', 'game'));
@@ -74,12 +75,13 @@ const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://x');
     if (url.pathname === '/api/faucet' && req.method === 'GET') { faucet(req, res, url).catch(e => sendJson(res, 500, { ok: false, error: e.message })); return; }
     if (url.pathname === '/api/deposit-address' && req.method === 'POST') return depositAddress(req, res);
-    return sendJson(res, 404, { ok: false, error: 'not found' });
+    accounts.handle(req, res, url).then(done => { if (!done) sendJson(res, 404, { ok: false, error: 'not found' }); });
+    return;
   }
-  if (req.url === '/health') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: [...rooms.values()].reduce((n, r) => n + r.size, 0) })); return; }
+  if (req.url === '/health') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: [...rooms.values()].reduce((n, r) => n + r.size, 0), ...accounts.stats() })); return; }
   // public runtime config for the page (the Privy app ID is public by design; secrets never go here)
   if (req.url === '/config.js') {
-    const cfg = { HOOKLINE_PRIVY_APP_ID: process.env.PRIVY_APP_ID || '', HOOKLINE_PRIVY_CLIENT_ID: process.env.PRIVY_CLIENT_ID || '', HOOKLINE_LIGHTER_NET: process.env.LIGHTER_NET || 'testnet' };
+    const cfg = { HOOKLINE_PRIVY_APP_ID: process.env.PRIVY_APP_ID || '', HOOKLINE_PRIVY_CLIENT_ID: process.env.PRIVY_CLIENT_ID || '', HOOKLINE_LIGHTER_NET: process.env.LIGHTER_NET || 'testnet', HOOKLINE_ECONOMY_MODE: accounts.MODE };
     res.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-cache' });
     res.end(Object.entries(cfg).map(([k, v]) => `window.${k} = window.${k} || ${JSON.stringify(v)};`).join('\n'));
     return;
