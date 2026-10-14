@@ -567,6 +567,8 @@
   .real-links { font-size: 12.5px; font-weight: 800; } .real-links a { color: var(--mist); }
   #h-wallet.realchip { border-color: rgba(61,220,151,.8); cursor: pointer; pointer-events: auto; } #h-wallet.realchip::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 6px #3ddc97; margin-right: 5px; }
   .tag.say { animation: none; z-index: 3; }
+  .tag.say.flip > span { left: calc(-50% - 26px); }
+  .tag.say.flip > span::after { left: auto; right: -8px; border-right: 0; border-left: 8px solid #fff; border-top-color: transparent; }
   .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
@@ -2079,6 +2081,8 @@
     const f = pnlFrac(p), vf = S.voiceFlags || (S.voiceFlags = {});
     const once = (k, cond, line) => { if (cond && !vf[k]) { vf[k] = true; say(line); } };
     once('cutit', f < -0.6, 'cutit'); once('sinking', (S.sink || 0) > 0.3, 'sinking'); once('towed', (S.tension || 0) > 0.6 && Math.hypot(ME.vx, ME.vz) > 2.2, 'towed');
+    if (vf.towed && !SAVE.towTip) { SAVE.towTip = 1; persist(); toast('🎣 Losing fish drag your boat, and the bigger the bet the harder they pull. Ride it out, or CUT LINE before the Kraken.'); }
+    if (f >= PULL_MIN && !SAVE.reelTip) { SAVE.reelTip = 1; persist(); toast('💚 In the green: the fish swims toward you. PULL IN to bank the profit.'); }
     once('red', f < -0.08, 'red'); once('big', f > 0.3, 'big'); once('green', f >= PULL_MIN, 'green');
   }
 
@@ -2809,8 +2813,11 @@
   function project(v) { const p = v.clone().project(camera); return { x: (p.x + 1) / 2 * W, y: (1 - p.y) / 2 * H, on: p.z < 1 && p.x > -1.2 && p.x < 1.2 && p.y > -1.2 && p.y < 1.2 }; }
   function tag(key, cls, html, worldPos) {
     let el = tagEls.get(key); if (!el) { el = document.createElement('div'); tagsEl.append(el); tagEls.set(key, el); }
-    el.className = 'tag ' + cls; if (el._h !== html) { el.innerHTML = html; el._h = html; }
-    const p = project(worldPos); el.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -100%)`; el.style.display = p.on ? '' : 'none'; el._seen = true;
+    el.className = 'tag ' + cls; if (el._h !== html) { el.innerHTML = html; el._h = html; el._w = 0; }
+    const p = project(worldPos); if (!el._w && p.on) el._w = el.offsetWidth;   // keep labels on screen: clamp by half their width
+    const hw = (el._w || 0) / 2, x = cls === 'say' ? p.x : clamp(p.x, hw + 6, Math.max(hw + 6, W - hw - 6));
+    if (cls === 'say' && p.x + hw * 2 + 36 > W) el.classList.add('flip');   // no room on the right: speak to the left
+    el.style.transform = `translate(${x}px, ${p.y}px) translate(-50%, -100%)`; el.style.display = p.on ? '' : 'none'; el._seen = true;
   }
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function updateTags() {
