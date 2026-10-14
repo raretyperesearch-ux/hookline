@@ -606,6 +606,18 @@
   .rods button[aria-pressed="true"] { border-color: #ffd23f; background: #164a78; } .rods button:disabled { opacity: .5; }
   .onb-wallet { display: block; text-align: center; color: #b9d6ee; margin-top: 8px; } .onb-wallet img { width: 16px; height: 16px; vertical-align: -3px; }
   .sail .card.onb { background: rgba(6, 26, 51, .88); border: 2px solid #1d5585; border-radius: 20px; padding: 14px; backdrop-filter: blur(6px); }
+  .acct { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; background: #0e3559; border: 2px solid #1d5585; border-radius: 16px; padding: 10px 12px; margin: 0 0 12px; }
+  .acct .av { grid-row: span 2; width: 40px; height: 40px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 3px 0 #0006; }
+  .acct b { font-family: var(--display); font-size: 15px; } .acct small { color: #b9d6ee; font-size: 12px; line-height: 1.35; }
+  .acct button { grid-column: 1 / -1; margin-top: 6px; } .acct.ok { border-color: #3ddc9788; } .acct.off { border-color: #ff6b7088; }
+  .acct.nudge { grid-template-columns: 1fr; border-style: dashed; } .acct.nudge button { grid-column: auto; }
+  .mk-wallet { display: flex; align-items: baseline; justify-content: space-between; background: #06213b; border-radius: 14px; padding: 8px 14px; margin: 0 0 10px; }
+  .mk-wallet span { color: #b9d6ee; font-size: 13px; font-weight: 700; } .mk-wallet b { font-family: var(--display); font-size: 26px; color: #ffd23f; }
+  .mk-wallet b.bump { animation: axbump .5s ease-out; } @keyframes axbump { 0% { transform: scale(1); } 30% { transform: scale(1.25); color: #fff; } 100% { transform: scale(1); } }
+  .mk-how { display: flex; align-items: center; justify-content: space-between; gap: 2px; margin: 0 0 12px; }
+  .mk-how span { display: grid; justify-items: center; text-align: center; font-size: 22px; flex: 1; } .mk-how small { font-size: 10.5px; color: #b9d6ee; line-height: 1.2; margin-top: 2px; }
+  .mk-how i { font-style: normal; color: #5fb4ff; font-weight: 800; }
+  details.adv { margin: 0 0 12px; } details.adv > summary { cursor: pointer; color: #b9d6ee; font-size: 12.5px; font-weight: 700; padding: 6px 2px; } details.adv[open] > summary { margin-bottom: 8px; }
   .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
@@ -712,7 +724,9 @@
       <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h2>Gear</h2>
       <p class="sub">Everything here is bought with AX. Gear changes how you fish, not the market.</p>
+      <div class="acct" id="acct"></div>
       <label class="lc-toggle voice-toggle"><input type="checkbox" id="voice-on" checked> 🎙️ Fisherman voice</label>
+      <details class="adv"><summary>Advanced · connect your own Lighter relay</summary>
       <div class="lighter-card" id="lighter-card">
         <div class="lc-head"><b>Lighter connection</b><span class="venue-badge" id="lc-badge"><i></i><span>Paper</span></span></div>
         <p>Prices are always live from Lighter when your network allows it. To make real fills, run the HookLine relay (holds your API key, enforces limits) and paste its URL and token here. Start on testnet.</p>
@@ -721,6 +735,7 @@
         <div class="lc-row"><button class="optbtn" id="lc-test" type="button">Test relay</button><label class="lc-toggle"><input type="checkbox" id="lc-real"> Real fills</label></div>
         <small id="lc-status">Not connected. Everything is paper money.</small>
       </div>
+      </details>
       <div class="eq" id="eq"></div>
       <div id="shop"></div>
     </section>
@@ -735,7 +750,9 @@
     <section class="screen" id="s-market" hidden aria-label="Market">
       <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h2>Harbor Market</h2>
-      <p class="sub">Every green fish you pull in lands in your cooler. Sell it to the Harbor for AX, or turn it into bait.</p>
+      <div class="mk-wallet"><span>Your AX</span><b id="mk-ax">0</b></div>
+      <div class="mk-how"><span>🎣<small>Catch green fish</small></span><i>→</i><span>🧊<small>They land in your cooler</small></span><i>→</i><span>⚓<small>Sell for AX or craft bait</small></span><i>→</i><span>🛠️<small>Better rods &amp; boats</small></span></div>
+      <div class="acct nudge" id="mk-acct" hidden></div>
       <div class="treasury" id="mk-treasury"></div>
       <div class="mk-h"><h3>Your cooler</h3><button class="optbtn" id="mk-sellall" type="button">Sell all</button></div>
       <div id="mk-cooler" class="mk-list"></div>
@@ -1268,7 +1285,7 @@
       if (r.token) { ACC.token = r.token; try { localStorage.setItem(TOKEN_KEY, r.token); } catch (_) { } }
       applyAccount(r.account, false); ACC.treasury = r.treasury; ACC.online = true;
     } catch (e) { ACC.online = false; console.info('[HookLine] account server unreachable, playing on this device only:', e.message); }
-    renderAll(); if (S.tab === 'market') renderMarket();
+    renderAll(); if (S.tab === 'market') renderMarket(); renderAccount();
   }
   // every AX movement: predict now, let the server decide
   function econ(action, args = {}) {
@@ -3548,8 +3565,31 @@
   function buybackLeft() { if (SAVE.sold.day !== HL_ECON.dayStr()) return DAILY_BUYBACK; return HL_ECON.buybackLeft(SAVE); }
   const canCraft = b => HL_ECON.canCraft(SAVE, b);
   function recipeText(r) { return [r.fish ? `${r.fish} fish` : '', r.scraps ? `${r.scraps} scrap${r.scraps > 1 ? 's' : ''}` : ''].filter(Boolean).join(' + '); }
+  function renderAccount() {
+    const signed = ACC.kind === 'privy', who = SAVE.nick || 'Angler', coat = SAVE.coat || COATS[0];
+    const html = !ACC.online ? `<i class="av" style="background:${coat}"></i><b>${esc(who)} · offline</b><small>Can't reach the HookLine server, so this session is saved on this device only. It syncs when you're back.</small>`
+      : signed ? `<i class="av" style="background:${coat}"></i><b>${esc(who)} ✓</b><small>Signed in${ACC.email ? ` as ${esc(ACC.email)}` : ''}. Your AX, gear and catch are saved to your account and follow you to any device.</small>`
+      : `<i class="av" style="background:${coat}"></i><b>${esc(who)} · guest</b><small>Your progress is saved on HookLine for this browser. Sign in to keep it on every device and to fish with real money.</small><button class="big-btn reel" type="button" data-acct-login>SIGN IN · KEEP MY PROGRESS</button>`;
+    const el = $('#acct'); if (el) { el.className = 'acct' + (!ACC.online ? ' off' : signed ? ' ok' : ''); el.innerHTML = html; }
+    const nudge = $('#mk-acct'); if (nudge) { const show = ACC.online && !signed && SAVE.cooler.length > 0; nudge.hidden = !show; if (show) nudge.innerHTML = `<small>🔒 Your catch is saved to a guest account on this browser. Sign in so it can't get lost.</small><button class="optbtn" type="button" data-acct-login>Sign in</button>`; }
+  }
+  document.addEventListener('click', async e => {
+    const b = e.target.closest('[data-acct-login]'); if (!b) return; const api = realApi(); if (!api) return;
+    b.disabled = true; const t = b.textContent; b.textContent = 'Signing in…';
+    try { await api.login(); const r = await linkPrivy(); const st = await api.status(); renderReal(st); if (r) toast(r.switched ? `Welcome back, ${SAVE.nick}! Your account is loaded.` : 'Signed in. Your progress is now saved to your account.', 'good'); if (r && r.switched) swapBoat(); }
+    catch (err) { toast(err.message || 'Sign-in was cancelled.', 'warn'); }
+    b.disabled = false; b.textContent = t; renderAccount(); renderAll(); if (S.tab === 'market') renderMarket();
+  });
+  let shownAx = null;
+  function renderWallet() {
+    const el = $('#mk-ax'); if (!el) return; const to = SAVE.ax, from = shownAx == null ? to : shownAx; shownAx = to;
+    if (from === to) { el.textContent = to.toLocaleString('en-US'); return; }
+    el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+    const t0 = performance.now(), step = now => { const k = Math.min(1, (now - t0) / 600); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))).toLocaleString('en-US'); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  }
   function renderMarket() {
-    $('#mk-dot').hidden = true;
+    $('#mk-dot').hidden = true; renderWallet(); renderAccount();
     const left = buybackLeft(), pool = ACC.treasury ? ACC.treasury.ax : null;
     $('#mk-treasury').innerHTML = `<span class="ic">⚓</span><b>Harbor Treasury${pool != null ? ` · ${pool.toLocaleString('en-US')} AX` : ''}</b>
       <small>Topped up by HookLine trading fees. It buys your fish every day, so a good catch pays twice: the trade, then the fish.</small>
@@ -3582,7 +3622,7 @@
     $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab || (tab === 'lakes' && b.dataset.tab === 'lake'))));
     for (const id of ['chest', 'gear', 'market', 'dex', 'quests', 'lakes']) $('#s-' + id).hidden = tab !== id;
     if (tab === 'dex' && SAVE.tut === 3) tutAdvance(4); if (tab === 'market' && SAVE.tut === 4) tutAdvance(5); if (tab === 'gear' && SAVE.tut === 5) tutAdvance(6);
-    if (tab === 'chest') renderTank(); if (tab === 'gear') { renderGear(); renderLighterCard(); } if (tab === 'dex') renderDex(); if (tab === 'quests') renderQuests(); if (tab === 'market') renderMarket(); if (tab === 'lakes') renderLakes();
+    if (tab === 'chest') renderTank(); if (tab === 'gear') { renderGear(); renderLighterCard(); renderAccount(); } if (tab === 'dex') renderDex(); if (tab === 'quests') renderQuests(); if (tab === 'market') renderMarket(); if (tab === 'lakes') renderLakes();
     if (tab !== 'lake') $('#tip').hidden = true;
   }
   function switchLake(i) {
