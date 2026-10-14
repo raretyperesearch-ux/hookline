@@ -561,6 +561,11 @@
   .real-toggle { display: flex; gap: 8px; align-items: center; font-weight: 800; font-size: 13px; }
   .real-fine { font-size: 11px; color: var(--mist); font-weight: 700; max-width: 320px; }
   .real-err { color: #ff8a95; font-weight: 800; font-size: 12.5px; max-width: 320px; }
+  .demo-login { z-index: 13; } .demo-login input { width: 100%; max-width: 300px; font: 700 15px var(--body); padding: 10px 12px; border-radius: 12px; border: 2px solid var(--line); background: rgba(0,0,0,.25); color: #fff; }
+  .demo-login .big-btn { max-width: 300px; }
+  .demo-rib { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); background: #ff9f43; }
+  .real-links { font-size: 12.5px; font-weight: 800; } .real-links a { color: var(--mist); }
+  #h-wallet.realchip { border-color: rgba(61,220,151,.8); cursor: pointer; pointer-events: auto; } #h-wallet.realchip::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 6px #3ddc97; margin-right: 5px; }
 </style>
 
 <div class="page">
@@ -717,7 +722,17 @@
       <div class="actions"><button class="big-btn reel" id="pd-close" type="button">NEXT ROUND</button></div>
     </div>
 
+    <div class="overlay real demo-login" id="o-demo-login" hidden>
+      <span class="ribbon">DEMO SIGN-IN · stands in for Privy</span>
+      <h3>Log in or sign up</h3>
+      <button class="big-btn ghost" type="button" data-login="google">Continue with Google</button>
+      <input id="demo-email" type="email" placeholder="your@email.com" autocomplete="off">
+      <button class="big-btn reel" type="button" data-login="email">Continue with email</button>
+      <button class="real-x" type="button" data-login="x" aria-label="Cancel">×</button>
+    </div>
+
     <div class="overlay real" id="o-real" hidden>
+      <span class="ribbon demo-rib" id="real-demo-rib" hidden>DEMO · no real money</span>
       <button class="real-x" id="real-x" type="button" aria-label="Close">×</button>
       <div class="real-steps"><i data-st="0">1</i><b></b><i data-st="1">2</i><b></b><i data-st="2">3</i></div>
       <section data-step="0">
@@ -740,6 +755,7 @@
         <div class="real-limits"><span>Max bait <b id="real-lim-b">$25</b></span><span>Max leverage <b id="real-lim-l">10×</b></span></div>
         <label class="real-toggle"><input type="checkbox" id="real-on"> Real fills on: every cast opens a real position</label>
         <button class="big-btn reel" id="real-go" type="button">START FISHING</button>
+        <div class="real-links"><a href="#" id="real-more">Add more</a> · <a href="#" id="real-out">Sign out</a></div>
         <small class="real-fine">Trading leveraged perps can lose your whole bait. The knife (stop loss) and net (take profit) are real orders on Lighter.</small>
       </section>
       <p class="real-err" id="real-err" hidden></p>
@@ -1163,7 +1179,7 @@
   if (SAVE.tut === undefined) SAVE.tut = 0;   // everyone gets the guided first catch once
   SAVE.tips = true;                            // the objective tracker replaced the old tip cards
   const boat = () => BOATS.find(b => b.id === SAVE.eq.boat) || BOATS[0];
-  const realMode = () => !!(SAVE.real && venue.broker && venue.broker.ok && venue.isLive);
+  const realMode = () => !!(SAVE.real && venue.broker && venue.broker.ok && (venue.isLive || venue.broker.demo));
   const slotsCap = () => chest().slots + boat().slots;
 
   /* ================= state ================= */
@@ -2144,7 +2160,7 @@
     if (!zn) return 'Drive into a fishing zone to cast';
     if (Math.abs(ME.v) > 2.2) return 'Slow down to cast';
     if (S.positions.length >= slotsCap()) return 'Chest full';
-    const bal = zn.practice ? SAVE.paper : realMode() ? Infinity : SAVE.usd; if (bal < SAVE.bait) return 'Not enough margin';
+    const bal = zn.practice ? SAVE.paper : realMode() ? (S.realAvail ?? Infinity) : SAVE.usd; if (bal < SAVE.bait) return realMode() && !zn.practice ? 'Not enough on Lighter' : 'Not enough margin';
     return null;
   }
   function castLine(power = 0.55) {
@@ -2202,6 +2218,7 @@
     let pos; try { pos = await venue.openPosition({ market: spec.market, side: spec.side, marginUsd: SAVE.bait, leverage: lev, practice, real }); } catch (e) { toast('Lighter said no: ' + e.message, 'warn'); if (!real) SAVE.usd += SAVE.bait; return null; }
     const k = knife(), meta = { shiny: spec.shiny, knife: k.id, kind: k.kind, stop: knifeStopFor(), trail: SAVE.trail, halved: false, lake: zone ? zone.name : '' };
     S.meta[pos.id] = meta;
+    if (pos.real) setTimeout(refreshRealBal, 300);
     await armKnife(pos, meta);
     const n = net(), tp = n.tp === 'adjust' ? SAVE.tp : n.tp;
     if (tp) { meta.tp = tp; await venue.setTakeProfit(pos.id, pos.entry * (1 + pos.side * tp / pos.leverage)); }
@@ -2272,6 +2289,7 @@
       S.lastWin = { pnl: res.pnl, pct };
     }
     if (res.fraction >= 1) delete S.meta[p.id];
+    if (p.real) setTimeout(refreshRealBal, 400);
     persist(); renderAll(); sendPresence();
   });
   venue.onPositions(list => { S.positions = list; });
@@ -2798,8 +2816,10 @@
     $('#h-xp').style.width = clamp(SAVE.xp / xpFor(SAVE.lvl), 0, 1) * 100 + '%';
     $('#h-ax').textContent = SAVE.ax.toLocaleString('en-US');
     const practice = !!(S.zone && S.zone.practice);
-    $('#h-usd').textContent = practice ? `Paper ${fmtUSD(SAVE.paper, 0)}` : realMode() ? `LIGHTER ${S.realBal != null ? fmtUSD(S.realBal, 2) : 'live'}` : fmtUSD(SAVE.usd, 2);
-    $('#h-wallet').className = 'glass' + (practice ? ' practice-badge' : '');
+    $('#h-lakename').textContent = S.zone ? S.zone.name : 'Open water';
+    if (S.depositPending && !realMode()) { $('#h-usd').textContent = `⏳ ${fmtUSD(S.depositPending, 0)} landing…`; $('#h-wallet').className = 'glass realchip'; return; }
+    $('#h-usd').textContent = practice ? `Paper ${fmtUSD(SAVE.paper, 0)}` : realMode() ? `${venue.broker.demo ? 'DEMO ' : ''}${S.realBal != null ? fmtUSD(S.realBal, 2) : 'live'}` : fmtUSD(SAVE.usd, 2);
+    $('#h-wallet').className = 'glass' + (practice ? ' practice-badge' : '') + (realMode() && !practice ? ' realchip' : '');
     $('#h-lakename').textContent = S.zone ? S.zone.name : 'Open water';
   }
   let tapeI = 0;
@@ -2874,8 +2894,8 @@
     const lev = rod().lev;
     const why = castBlocker();
     const nz = nearestZone();
-    if (!casting && !full && why) cb.textContent = why === 'Slow down to cast' ? 'SLOW DOWN TO CAST' : why === 'Not enough margin' ? 'NOT ENOUGH MARGIN' : `⛵ SAIL TO ${nz.z.name.toUpperCase()} · ${Math.round(nz.d)}m`;
-    cb.disabled = casting || (!!why && !!S.zone);
+    if (!casting && !full && why) cb.textContent = why === 'Slow down to cast' ? 'SLOW DOWN TO CAST' : why === 'Not enough margin' ? 'NOT ENOUGH MARGIN' : why === 'Not enough on Lighter' ? `LOWER BAIT OR ADD FUNDS · ${fmtUSD(S.realAvail || 0)} FREE` : `⛵ SAIL TO ${nz.z.name.toUpperCase()} · ${Math.round(nz.d)}m`;
+    cb.disabled = casting || (!!why && !!S.zone && why !== 'Not enough on Lighter');
     cb.classList.toggle('sailto', !S.zone && !casting);
     $('#cast-note').textContent = full ? `All ${cap} lines are out. Pull one in, cut one, or get a bigger chest in Gear.`
       : !S.zone ? 'Drive into a glowing zone. Each one holds different markets; Open Water has them all.'
@@ -3019,6 +3039,68 @@
        status() → { ready, signedIn, address, account, balance, limits }   login()   fund(amountUsd, method)
        enableTrading()  (registers this device's Lighter trading key with one silent signature)
        venue()          (a LighterVenue-compatible object that signs orders in the browser)            */
+  // DEMO adapter: no real money. Fakes sign-in, a card top-up, the Lighter deposit and the exchange itself,
+  // so the whole flow can be played before Privy and the Lighter signer are plugged in.
+  function makeDemoReal() {
+    const KEY = 'hookline-demo-real', wait = ms => new Promise(r => setTimeout(r, ms));
+    let st; try { st = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) { st = null; }
+    st = Object.assign({ signedIn: false, address: null, who: null, balance: 0, trading: false, positions: [] }, st || {});
+    for (const p of st.positions) st.balance += p.margin; st.positions = [];          // positions don't survive a reload in the demo: refund them
+    const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { } };
+    const limits = { maxMargin: 25, maxLev: 10 };
+    const pnlOf = (p, px) => p.margin * p.lev * p.side * (px / p.entry - 1);
+    const settle = () => {   // the "exchange": knives, nets and liquidations
+      for (const p of [...st.positions]) {
+        const px = venue.price(p.market), f = p.lev * p.side * (px / p.entry - 1);
+        const hitSl = p.sl && (p.side > 0 ? px <= p.sl : px >= p.sl), hitTp = p.tp && (p.side > 0 ? px >= p.tp : px <= p.tp);
+        if (f <= -MAINT) st.positions.splice(st.positions.indexOf(p), 1);
+        else if (hitSl || hitTp) { st.balance += Math.max(0, p.margin + pnlOf(p, px)); st.positions.splice(st.positions.indexOf(p), 1); }
+      }
+      save();
+    };
+    const broker = { ok: true, demo: true, markets: null, async call(path, body) {
+      await wait(200 + Math.random() * 300);
+      const find = m => st.positions.find(p => p.market === m);
+      if (path === '/v1/markets') return {};
+      if (path === '/v1/prices') return {};
+      if (path === '/v1/positions') { settle(); return { collateral: st.balance + st.positions.reduce((a, p) => a + p.margin + pnlOf(p, venue.price(p.market)), 0), available: st.balance, positions: st.positions.map(p => ({ market: p.market, side: p.side, size: p.size, entry: p.entry, upnl: pnlOf(p, venue.price(p.market)), margin: p.margin })) }; }
+      if (path === '/v1/open') {
+        if (find(body.market)) throw new Error(`You already have a ${body.market} fish on Lighter`);
+        const margin = Math.min(body.margin_usd, limits.maxMargin), lev = Math.min(body.leverage, limits.maxLev);
+        if (st.balance < margin) throw new Error('Not enough USDC on Lighter. Add funds.');
+        const entry = venue.price(body.market) * (1 + body.side * 0.0003); st.balance -= margin;
+        const p = { market: body.market, side: body.side, margin, lev, entry, size: margin * lev / entry, sl: null, tp: null }; st.positions.push(p); save();
+        return { leverage: lev, margin_usd: margin, position: { entry, size: p.size } };
+      }
+      const p = find(body.market); if (!p) throw new Error('no open position');
+      if (path === '/v1/stop') { p.sl = p.entry * (1 + p.side * body.stop_frac / p.lev); save(); return { trigger: p.sl }; }
+      if (path === '/v1/tp') { p.tp = p.entry * (1 + p.side * body.tp_frac / p.lev); save(); return { trigger: p.tp }; }
+      if (path === '/v1/close') { const px = venue.price(p.market), f = body.fraction || 1, pnl = pnlOf(p, px) * f; st.balance += Math.max(0, p.margin * f + pnl); if (f >= 1) st.positions.splice(st.positions.indexOf(p), 1); else { p.margin *= 1 - f; p.size *= 1 - f; } save(); return { closed: f }; }
+      throw new Error('unknown call');
+    } };
+    return {
+      demo: true, broker: () => broker,
+      async status() { return { ready: true, pending: st.pending || 0, signedIn: st.signedIn, address: st.address, who: st.who, balance: st.balance + st.positions.reduce((a, p) => a + p.margin, 0), trading: st.trading, limits }; },
+      login() { return new Promise((res, rej) => {   // stands in for Privy's login modal
+        const o = $('#o-demo-login'); o.hidden = false;
+        const done = who => { o.hidden = true; st.signedIn = true; st.who = who; st.address = '0x' + Array.from({ length: 40 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join(''); save(); res(); };
+        o.onclick = e => { const b = e.target.closest('[data-login]'); if (!b) return; if (b.dataset.login === 'x') { o.hidden = true; rej(new Error('Sign-in was cancelled.')); return; }
+          const who = b.dataset.login === 'google' ? 'Google account' : ($('#demo-email').value.trim() || 'you@email.com'); b.textContent = 'Signing in…'; setTimeout(() => done(who), 900); };
+      }); },
+      async fund(amt, method, prog) {   // stands in for Privy funding (card on-ramp) + the USDC deposit to Lighter
+        const steps = method === 'card' ? [[0.25, `Paying ${fmtUSD(amt, 0)} with Apple Pay…`, 1200], [0.55, 'USDC arrived in your wallet', 900], [0.85, 'Depositing to Lighter (gas covered by HookLine)…', 1400], [1, 'On Lighter ✓', 500]]
+          : [[0.3, 'Waiting for your USDC…', 1200], [0.7, 'Depositing to Lighter (gas covered by HookLine)…', 1400], [1, 'On Lighter ✓', 500]];
+        for (const [k, msg, ms] of steps.slice(0, -1)) { prog(k, msg); await wait(ms); }
+        st.pending = (st.pending || 0) + amt; save();
+        setTimeout(() => { st.balance += amt; st.pending = Math.max(0, st.pending - amt); save(); if (window.onHookLineDeposit) window.onHookLineDeposit(amt); }, 25000);   // real deposits land on Lighter in a few minutes
+        return { pending: true };
+      },
+      async enableTrading() { await wait(700); st.trading = true; save(); },
+      signOut() { st.signedIn = false; st.trading = false; st.address = null; save(); },
+      addFunds: null,
+    };
+  }
+  if (!window.HookLineReal) window.HookLineReal = makeDemoReal();
   let realAmt = 20;
   const realApi = () => window.HookLineReal || null;
   function realStep(n) {
@@ -3028,7 +3110,7 @@
   }
   function realErr(msg) { const e = $('#real-err'); e.textContent = msg; e.hidden = false; }
   async function openReal() {
-    $('#o-real').hidden = false; const api = realApi();
+    $('#o-real').hidden = false; const api = realApi(); $('#real-demo-rib').hidden = !(api && api.demo);
     if (!api) { realStep(0); realErr('Real money mode is being set up (Privy + Lighter). Paper fishing works now; real fills are coming next.'); return; }
     const st = await api.status(); realStep(!st.signedIn ? 0 : st.balance > 0 ? 2 : 1); renderReal(st);
   }
@@ -3037,21 +3119,32 @@
     if (st.address) $('#real-addr').textContent = `Wallet ${st.address.slice(0, 6)}…${st.address.slice(-4)} is ready. Pick an amount to put on Lighter.`;
     $('#real-bal').textContent = fmtUSD(st.balance || 0);
     if (st.limits) { $('#real-lim-b').textContent = fmtUSD(st.limits.maxMargin, 0); $('#real-lim-l').textContent = st.limits.maxLev + '×'; }
-    $('#real-on').checked = !!SAVE.real; $('#real-open-t').textContent = st.signedIn ? (st.balance > 0 ? `${fmtUSD(st.balance)} on Lighter` : 'add funds') : 'sign in & add funds';
+    if (!$('#real-on').checked) $('#real-on').checked = !!SAVE.real; $('#real-open-t').textContent = st.signedIn ? (st.balance > 0 ? `${fmtUSD(st.balance)} on Lighter` : 'add funds') : 'sign in & add funds';
   }
   async function realLogin() { const api = realApi(); if (!api) return; try { await api.login(); const st = await api.status(); renderReal(st); realStep(st.balance > 0 ? 2 : 1); } catch (e) { realErr(e.message || 'Sign-in was cancelled.'); } }
   async function realFund(method) {
     const api = realApi(); if (!api) return; const pr = $('#real-progress'); pr.hidden = false; $('#real-pi').style.width = '10%';
     try {
-      await api.fund(realAmt, method, (k, msg) => { $('#real-pi').style.width = Math.round(k * 100) + '%'; if (msg) $('#real-pt').textContent = msg; });
-      $('#real-pt').textContent = 'Turning on trading…'; await api.enableTrading();
-      const st = await api.status(); renderReal(st); realStep(2); SFX.win(); confetti(ME.x, ME.z);
+      const r = await api.fund(realAmt, method, (k, msg) => { $('#real-pi').style.width = Math.round(k * 100) + '%'; if (msg) $('#real-pt').textContent = msg; });
+      $('#real-pt').textContent = 'Turning on trading (one automatic signature)…'; await api.enableTrading();
+      if (r && r.pending) { $('#o-real').hidden = true; if (S.showcase) closeSail(); S.depositPending = realAmt; renderHud();
+        zoneBanner(`${fmtUSD(realAmt, 0)} is on its way`, 'lands on Lighter in a few minutes · keep fishing on paper', '#3ddc97'); return; }
+      const st = await api.status(); $('#real-on').checked = true; renderReal(st); realStep(2); SFX.win(); confetti(ME.x, ME.z);
     } catch (e) { realErr(e.message || 'Deposit did not go through.'); } finally { pr.hidden = true; }
   }
   function realGo() {
-    const api = realApi(); if (api && $('#real-on').checked) { SAVE.real = true; venue.broker = api.broker ? api.broker() : venue.broker; persist(); toast('Real fills ON. Every cast is a real Lighter position.', 'warn'); }
-    $('#o-real').hidden = true; renderHud();
+    const api = realApi();
+    if (api && $('#real-on').checked) { SAVE.real = true; venue.broker = api.broker(); persist(); venue._watchReal(); refreshRealBal(); toast(api.demo ? 'DEMO real fills ON: casts open simulated Lighter positions.' : 'Real fills ON. Every cast is a real Lighter position.', 'warn'); }
+    else { SAVE.real = false; persist(); }
+    $('#o-real').hidden = true; if (S.showcase) closeSail(); renderHud(); renderAll();
   }
+  // the deposit landed: celebrate and offer to switch on real fills in one tap
+  window.onHookLineDeposit = async amt => {
+    S.depositPending = 0; SFX.win(); buzz([30, 40, 30]); confetti(ME.x, ME.z); rayBurst(new THREE.Vector3(ME.x, 3, ME.z), '#3ddc97', 2, 16);
+    zoneBanner(`${fmtUSD(amt, 0)} landed on Lighter!`, 'tap the green wallet chip to go real', '#3ddc97');
+    const api = realApi(); if (api) { const st = await api.status(); $('#o-real').hidden = false; $('#real-demo-rib').hidden = !api.demo; $('#real-on').checked = true; renderReal(st); realStep(2); }
+  };
+  async function refreshRealBal() { if (!realMode()) return; try { const r = await venue.broker.call('/v1/positions'); S.realBal = r.collateral; S.realAvail = r.available ?? r.collateral; renderHud(); renderLive(); } catch (_) { } }
   function closeSail() {
     SFX.init(); SFX.ambient();
     S.showcase = false; phone.classList.remove('showcase'); $('#o-sail').hidden = true; S.swoop = 1.8;
@@ -3125,7 +3218,7 @@
   }
 
   /* input */
-  $('#cast').addEventListener('pointerdown', e => { e.preventDefault(); if (!S.zone && S.mode === 'idle') { S.goTo = nearestZone().z; toast(`Follow the arrow to ${S.goTo.name}.`, 'good'); SFX.tone(660, 0.08, 'triangle', 0.15); return; } startCharge(); });
+  $('#cast').addEventListener('pointerdown', e => { e.preventDefault(); if (S.zone && S.mode === 'idle' && castBlocker() === 'Not enough on Lighter') { openReal(); realStep(1); return; } if (!S.zone && S.mode === 'idle') { S.goTo = nearestZone().z; toast(`Follow the arrow to ${S.goTo.name}.`, 'good'); SFX.tone(660, 0.08, 'triangle', 0.15); return; } startCharge(); });
   $('#cast').addEventListener('pointerup', releaseCharge); $('#cast').addEventListener('pointerleave', releaseCharge);
   $('#cast').addEventListener('keydown', e => { if (e.key === 'Enter') castLine(); });
   $('#castmore').addEventListener('click', () => { if (S.mode === 'fight') { S.mode = 'idle'; S.active = null; renderLive(); } });
@@ -3197,6 +3290,11 @@
   $('#real-card').addEventListener('click', () => realFund('card'));
   $('#real-crypto').addEventListener('click', () => realFund('crypto'));
   $('#real-go').addEventListener('click', realGo);
+  $('#real-more').addEventListener('click', e => { e.preventDefault(); realStep(1); });
+  $('#real-out').addEventListener('click', e => { e.preventDefault(); const api = realApi(); if (api) api.signOut(); SAVE.real = false; venue.broker = null; persist(); realStep(0); renderHud(); });
+  $('#h-wallet').addEventListener('click', () => { if (realMode() || S.depositPending) openReal(); });
+  // keep real mode across reloads
+  (async () => { const api = realApi(); if (!api || !SAVE.real) return; const st = await api.status(); if (st.signedIn && st.trading) { venue.broker = api.broker(); setTimeout(refreshRealBal, 1500); } else { SAVE.real = false; persist(); } })();
   $('#sail-prev').addEventListener('click', () => { sailIdx = (sailIdx + BOATS.length - 1) % BOATS.length; SFX.tone(660, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
