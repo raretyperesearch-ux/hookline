@@ -628,10 +628,10 @@
 
     <section class="screen" id="s-quests" hidden aria-label="Quests">
       <h2>Today's quests</h2>
-      <p class="sub">Resets in 14h 22m. Smart fishing pays: cutting losers early counts.</p>
+      <p class="sub" id="q-sub">New quests every day. Smart fishing pays: cutting losers early counts.</p>
       <div id="quests" style="display:grid;gap:6px"></div>
-      <h3>Weekly Derby</h3>
-      <p class="sub">Best single catch by % gain. Top 3 win the Kraken Rod skin. Sample standings.</p>
+      <h3>Trophy wall</h3>
+      <p class="sub">Your five best catches by % gain.</p>
       <ol class="board" id="board"></ol>
     </section>
 
@@ -1158,7 +1158,7 @@
     ['island_pine', -14, -16, 1.0, 0.3], ['island_tropic', 18, 14, 1.0, 2.1], ['island_swamp', -20, 58, 1.0, 1.2], ['island_tropic', 22, 62, 0.9, 4.0],
     ['island_pine', -72, -2, 1.2, 0.8], ['island_tropic', -70, -62, 0.9, 5.1], ['island_pine', 74, -64, 1.0, 2.6], ['island_swamp', 68, 76, 1.1, 0.4],
     ['island_pine', -82, 78, 1.0, 3.3], ['island_tropic', 92, 30, 0.8, 1.7], ['island_pine', 8, -48, 0.8, 4.4], ['island_tropic', -30, -86, 0.9, 2.2],
-    ['lighthouse', -13, 2, 0.72, 0.4],
+    ['lighthouse', -13, 2, 0.62, 0.4],
   ];
   const isRadius = { island_pine: 9.5, island_tropic: 7.5, island_swamp: 6.5, lighthouse: 2.4 };
   const zoneAt = (x, z) => ZONES.find(zn => Math.hypot(x - zn.x, z - zn.z) < zn.r) || null;
@@ -1307,7 +1307,7 @@
     hs.scale.set(7.5, 1.75, 1); hs.position.set(-3, 3.6, 5); hs.renderOrder = 12; scene.add(hs); S.harborSign = hs;
   }
   function addLighthouseBeam(x, z, s) {
-    const y = 12.6 * s, piv = new THREE.Group(); piv.position.set(x, y, z); scene.add(piv);
+    const y = 12.1 * s, piv = new THREE.Group(); piv.position.set(x, y, z); scene.add(piv);
     for (const dir of [1, -1]) { const b = makeBeam('#fff1b8', 0.35, 26, 0.55, 3); b.geometry = b.geometry.clone(); b.geometry.scale(1, 1, 1); b.rotation.z = -dir * Math.PI / 2; piv.add(b); }
     const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 12), new THREE.MeshBasicMaterial({ color: new THREE.Color(5, 4.4, 2.6) })); piv.add(lamp);
     S.lighthouse = piv;
@@ -1689,7 +1689,7 @@
     const r = roundNow();
     if (r.id !== S.round.id) { endRound(); S.round = { id: r.id, score: 0, crown: S.round.crown }; S.bots.forEach(b => { b.rs = 0; }); }
     const fz = frenzyNow();
-    if (fz !== S.frenzyZone) { S.frenzyZone = fz; if (fz) { zoneBanner(`FRENZY: ${fz.name}!`, 'fast bites · 3× shiny · 2× XP', '#ffd23f'); SFX.level(); buzz([30, 30, 30]); } }
+    if (fz !== S.frenzyZone && !S.showcase) { S.frenzyZone = fz; if (fz) { zoneBanner(`FRENZY: ${fz.name}!`, 'fast bites · 3× shiny · 2× XP', '#ffd23f'); SFX.level(); buzz([30, 30, 30]); } }
     renderRound();
   }
   function endRound() {
@@ -1698,7 +1698,7 @@
     $('#pd-steps').innerHTML = rows.slice(0, 3).map((x, i) => `<div class="step s${i + 1}">${img(boatArt(x.b))}<b>${esc(x.name)}${i === 0 ? ' 👑' : ''}</b><small class="${x.sc >= 0 ? 'up' : 'down'}">${fmtPct(x.sc)}</small><div class="block">${i + 1}</div></div>`).join('');
     const xp = [100, 60, 40][meI] || (S.round.score !== 0 ? 15 : 0);
     $('#pd-you').textContent = `You finished #${meI + 1} of ${rows.length} with ${fmtPct(S.round.score)}${xp ? ` · +${xp} XP` : ''}${meI === 0 ? ' · you wear the crown next round' : ''}`;
-    if (xp) addXp(xp); S.round.crown = meI === 0;
+    if (xp) addXp(xp); S.round.crown = meI === 0; if (meI < 3 && S.round.score > 0) quest('podium', 1);
     $('#o-podium').hidden = false; SFX.level(); if (meI === 0) { confetti(ME.x, ME.z); rayBurst(new THREE.Vector3(ME.x, 3, ME.z), '#ffd23f', 2.2, 18); }
   }
   // objective tracker: the guided first catch, then frenzy and collection goals
@@ -1932,7 +1932,7 @@
     const d = SAVE.dex[spec.market] || { n: 0, best: 0, shiny: false }, isNew = d.n === 0;
     d.n++; if (spec.shiny) d.shiny = true; SAVE.dex[spec.market] = d;
     S.positions = [...venue.positions.values()];
-    quest('land', 1); quest('hold', 0, S.positions.length);
+    quest('land', 1); quest('hold', 0, S.positions.length); if (isNew) quest('newsp', 1); if (spec.shiny) quest('shiny', 1); if (zone && zone === S.frenzyZone) quest('frenzy', 1); if (zone) quest('zone_' + zone.id, 1);
     addXp((spec.shiny ? 40 : 12) * (zone && zone === S.frenzyZone ? 2 : 1));
     const mk = MARKETS[spec.market];
     SFX.bite();
@@ -1988,6 +1988,7 @@
       pop(mk.fish, title, `${p.market} ${fmtSigned(res.pnl)} (${fmtPct(pct)}) · ${fmtUSD(res.returned)} back`, win ? 'win' : 'lose');
       addXp(win ? 20 + Math.round(Math.min(pct, 3) * 40) : 5);
       if (win && (!SAVE.best || pct > SAVE.best.pct)) SAVE.best = { mk: p.market, pct };
+      if (win) { SAVE.trophies = [...(SAVE.trophies || []), { mk: p.market, pct, t: Date.now() }].sort((a, b) => b.pct - a.pct).slice(0, 5); }
       const d = SAVE.dex[p.market]; if (d && pct > d.best) d.best = pct;
       if (win && pct > 0.5) setTimeout(() => reveal(mk.fish, res.reason === 'take-profit' ? 'NETTED!' : 'BIG CATCH', `${mk.name} landed`, `${p.market} ${p.side > 0 ? 'long' : 'short'} ${p.leverage}×`, fmtSigned(res.pnl)), 1500);
       S.lastWin = { pnl: res.pnl, pct };
@@ -2027,6 +2028,30 @@
     const before = q.prog; q.prog = Math.min(q.goal, set != null ? Math.max(q.prog, set) : q.prog + inc);
     if (q.prog >= q.goal && before < q.goal) setTimeout(() => toast(`Quest complete: ${q.text}. Claim it in Quests.`, 'good'), 1600);
   }
+  // daily quests: a fresh set every UTC day, picked deterministically so it is the same for everyone
+  const QUEST_POOL = [
+    { id: 'land', text: n => `Land ${n} fish`, n: [3, 5, 8], reward: 60, icon: 'f_tuna' },
+    { id: 'win', text: n => `Close ${n} fish in profit`, n: [1, 2, 3], reward: 80, icon: 'net' },
+    { id: 'cut', text: () => 'Cut a loser before −20%', n: [1], reward: 80, icon: 'knife2' },
+    { id: 'newsp', text: n => `Discover ${n} new species`, n: [1, 2, 3], reward: 90, icon: 'book' },
+    { id: 'frenzy', text: n => `Hook ${n} fish in a Frenzy zone`, n: [1, 2], reward: 100, icon: 'star' },
+    { id: 'perfect', text: n => `Make ${n} PERFECT casts`, n: [2, 3], reward: 70, icon: 'rod2' },
+    { id: 'podium', text: () => 'Finish a round in the top 3', n: [1], reward: 120, icon: 'trophy' },
+    { id: 'shiny', text: () => 'Hook a shiny fish ✦', n: [1], reward: 150, icon: 'star' },
+    { id: 'hold', text: n => `Hold ${n} fish at once`, n: [2, 3], reward: 90, icon: 'chest2' },
+    { id: 'zone_bayou', text: n => `Hook ${n} fish in Meme Bayou`, n: [2, 3], reward: 70, icon: 'f_puffer' },
+    { id: 'zone_pier', text: n => `Hook ${n} stocks off Wall St. Pier`, n: [2, 3], reward: 70, icon: 'f_shark' },
+    { id: 'zone_abyss', text: n => `Hook ${n} fish in the AI Abyss`, n: [1, 2], reward: 80, icon: 'f_octopus' },
+    { id: 'zone_gold', text: n => `Hook ${n} fish on the Gold Coast`, n: [2], reward: 70, icon: 'f_sunfish' },
+  ];
+  function rollQuests() {
+    const day = Math.floor(Date.now() / 864e5); if (SAVE.qday === day) return;
+    let seed = day * 9301 + 49297; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    const pool = QUEST_POOL.slice(), out = [];
+    while (out.length < 4) { const q = pool.splice(Math.floor(rnd() * pool.length), 1)[0]; const n = q.n[Math.floor(rnd() * q.n.length)]; out.push({ id: q.id, text: q.text(n), goal: n, prog: 0, reward: q.reward + (n - 1) * 20, icon: q.icon }); }
+    SAVE.quests = out; SAVE.qday = day; persist();
+  }
+  rollQuests();
   function claim(id) {
     const q = SAVE.quests.find(x => x.id === id); if (!q || q.claimed || q.prog < q.goal) return;
     q.claimed = true; SAVE.ax += q.reward; SFX.coin(); toast(`+${q.reward} AX`, 'good'); persist(); renderAll();
@@ -2071,7 +2096,7 @@
   function releaseCharge() {
     if (!S.charge) return;
     const p = chargeP(), perfect = p > 0.82 && p < 0.94; S.charge = null; $('#charge').hidden = true; $('#drive-hint').style.visibility = '';
-    if (perfect) { worldFloat('PERFECT CAST!', new THREE.Vector3(ME.x, 3, ME.z), '#ffd23f'); S.perfect = true; buzz(25); SFX.tone(1320, 0.12, 'triangle', 0.2); }
+    if (perfect) { quest('perfect', 1); worldFloat('PERFECT CAST!', new THREE.Vector3(ME.x, 3, ME.z), '#ffd23f'); S.perfect = true; buzz(25); SFX.tone(1320, 0.12, 'triangle', 0.2); }
     castLine(Math.max(0.15, p));
   }
   function updateCharge(dt) {
@@ -2137,6 +2162,7 @@
     const ring = document.getElementById('boost-ring'); if (ring) ring.style.strokeDashoffset = String(226 * (1 - ME.boost));
   }
   function zoneBanner(title, sub, color) {
+    if (S.showcase) return;
     const b = $('#zone-banner'); b.hidden = true; void b.offsetWidth; b.classList.remove('out'); b.style.setProperty('--zc', color || '#ffd23f');
     b.querySelector('b').textContent = title; b.querySelector('small').textContent = sub; b.hidden = false;
     SFX.tone(523, 0.18, 'triangle', 0.18); SFX.tone(784, 0.25, 'triangle', 0.18, null, 0.12); SFX.tone(1046, 0.3, 'sine', 0.12, null, 0.24);
@@ -2283,7 +2309,7 @@
   function updateKraken(dt) {
     const k = S.krakenAt; if (!k) return;
     k.t += dt;
-    if (!k.ents) { k.ents = []; for (let i = 0; i < 6; i++) { const t = MODELS.tentacle ? MODELS.tentacle.clone() : null; if (!t) break; const a = i / 6 * Math.PI * 2; t.position.set(k.x + Math.cos(a) * 2.2, -5, k.z + Math.sin(a) * 2.2); t.rotation.y = -a + Math.PI / 2; t.scale.setScalar(1.5 + Math.random() * 0.6); scene.add(t); k.ents.push({ t, a }); } }
+    if (!k.ents) { k.ents = []; for (let i = 0; i < 6; i++) { const t = MODELS.tentacle ? MODELS.tentacle.clone() : null; if (!t) break; const a = i / 6 * Math.PI * 2; t.position.set(k.x + Math.cos(a) * 2.2, -5, k.z + Math.sin(a) * 2.2); t.rotation.y = -a + Math.PI / 2; t.scale.setScalar(0.85 + Math.random() * 0.35); scene.add(t); k.ents.push({ t, a }); } }
     const rise = k.t < 0.7 ? easeOut(k.t / 0.7) : k.t < 1.8 ? 1 : 1 - easeOut((k.t - 1.8) / 0.8);
     for (const e of k.ents) { e.t.position.y = -7 + rise * 6.6; e.t.rotation.z = Math.sin(S.time * 4 + e.a) * 0.25 - rise * 0.35; }
     if (k.t > 0.4 && !k.splashed) { k.splashed = true; splash3(new THREE.Vector3(k.x, 0, k.z), 2.6); geyser(new THREE.Vector3(k.x, 0, k.z), 1.6); }
@@ -2711,15 +2737,15 @@
     $('#dex-sub').textContent = `${seen} of ${MK_IDS.length} fish caught. Every Lighter market is a species; shiny ones are rare.`;
   }
   function renderQuests() {
+    rollQuests(); { const left = 864e5 - Date.now() % 864e5; $('#q-sub').textContent = `New quests in ${Math.floor(left / 36e5)}h ${Math.floor(left % 36e5 / 6e4)}m. Quests pay AX, AX buys gear.`; }
     let claimable = false;
     $('#quests').innerHTML = SAVE.quests.map(q => {
       const done = q.prog >= q.goal; if (done && !q.claimed) claimable = true;
       return `<div class="quest ${q.claimed ? 'done' : ''}">${img(q.icon)}<div><b>${q.text} · ${q.prog}/${q.goal}</b><div class="qbar"><i style="width:${q.prog / q.goal * 100}%"></i></div></div>${done && !q.claimed ? `<button type="button" data-claim="${q.id}">CLAIM</button>` : `<span class="rw">${q.claimed ? 'Done' : `${img('coin')}${q.reward}`}</span>`}</div>`;
     }).join('');
     $('#q-dot').hidden = !claimable;
-    const rows = [{ who: 'reefraider', mk: 'SOL', pct: 3.42 }, { who: '0xkoi', mk: '1000PEPE', pct: 2.88 }, { who: 'sharkbait.eth', mk: 'BTC', pct: 1.95 }, { who: 'mintymaxi', mk: 'ETH', pct: 1.1 }, { who: 'lurelord', mk: 'DOGE', pct: 0.74 }];
-    if (SAVE.best) rows.push({ who: 'You', mk: SAVE.best.mk, pct: SAVE.best.pct, me: true });
-    rows.sort((a, b) => b.pct - a.pct);
+    const rows = (SAVE.trophies || []).filter(r => MARKETS[r.mk]).map(r => ({ who: new Date(r.t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), mk: r.mk, pct: r.pct }));
+    if (!rows.length) { $('#board').innerHTML = '<li><span class="who">No trophies yet. Close a fish in profit to hang it here.</span></li>'; return; }
     $('#board').innerHTML = rows.map((r, i) => `<li class="${r.me ? 'me' : ''}"><span class="rk">${i + 1}</span>${img(MARKETS[r.mk].fish)}<span class="who">${r.who}<small>${MARKETS[r.mk].species} · ${r.mk}</small></span><span class="kg">${fmtPct(r.pct)}</span></li>`).join('');
   }
   function renderLakes() {
