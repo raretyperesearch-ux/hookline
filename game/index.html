@@ -540,7 +540,7 @@
     .obj { top: 78px; font-size: 11.5px; }
     .sheet { padding: 8px 10px; } .loadout .gearchip small { display: none; }
   }
-  #cast.sail { background: linear-gradient(180deg, #3aa0e8, #1f6fb8); color: #fff; box-shadow: 0 5px 0 #154c80; font-size: 17px; }
+  #cast.sailto { background: linear-gradient(180deg, #3aa0e8, #1f6fb8); color: #fff; box-shadow: 0 5px 0 #154c80; font-size: 17px; }
 </style>
 
 <div class="page">
@@ -2822,7 +2822,7 @@
     const nz = nearestZone();
     if (!casting && !full && why) cb.textContent = why === 'Slow down to cast' ? 'SLOW DOWN TO CAST' : why === 'Not enough margin' ? 'NOT ENOUGH MARGIN' : `⛵ SAIL TO ${nz.z.name.toUpperCase()} · ${Math.round(nz.d)}m`;
     cb.disabled = casting || (!!why && !!S.zone);
-    cb.classList.toggle('sail', !S.zone && !casting);
+    cb.classList.toggle('sailto', !S.zone && !casting);
     $('#cast-note').textContent = full ? `All ${cap} lines are out. Pull one in, cut one, or get a bigger chest in Gear.`
       : !S.zone ? 'Drive into a glowing zone. Each one holds different markets; Open Water has them all.'
       : S.target ? `Aiming at ${S.target.spec.market}${SAVE.sonar >= 2 ? (S.target.spec.side > 0 ? ' long' : ' short') : ''} · ${lev}× · ${fmtUSD(SAVE.bait, 0)} bait`
