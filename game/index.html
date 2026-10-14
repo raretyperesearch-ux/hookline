@@ -1869,18 +1869,19 @@
   // standalone multiplayer: the HookLine server (hookline/server) speaks the same presence shape as claude.ai rooms
   // ?mp= or window.HOOKLINE_MP, else the server this page came from (the HookLine server serves both)
   const MP_URL = new URLSearchParams(location.search).get('mp') || window.HOOKLINE_MP || (/^https?:$/.test(location.protocol) && !window.claude ? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}` : '');
+  // reconnecting socket: returns at once, keeps retrying with backoff, re-sends our latest presence on reconnect
   function wsRoom(url) {
-    return new Promise(res => {
-      let ws, me = null, peersCb = null, closeCb = null, opened = false;
-      try { ws = new WebSocket(url + (url.includes('?') ? '&' : '?') + 'room=lobby'); } catch (_) { res(null); return; }
-      const to = setTimeout(() => { if (!opened) res(null); }, 6000);
-      const api = { presence: p => { if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'presence', p })); return Promise.resolve(); }, onPeers: (cb, onClose) => { peersCb = cb; closeCb = onClose; }, standalone: true };
-      ws.onopen = () => { opened = true; clearTimeout(to); res(api); };
-      ws.onerror = () => { if (!opened) { clearTimeout(to); res(null); } };
-      ws.onclose = () => { if (closeCb) closeCb(); };
+    let ws = null, me = null, peersCb = null, last = null, tries = 0;
+    const full = url + (url.includes('?') ? '&' : '?') + 'room=lobby';
+    const connect = () => {
+      try { ws = new WebSocket(full); } catch (_) { setTimeout(connect, 3000); return; }
+      ws.onopen = () => { tries = 0; console.info('[mp] connected'); if (last) ws.send(last); };
+      ws.onclose = e => { console.info('[mp] closed', e.code); if (peersCb) peersCb({ peers: [] }); setTimeout(connect, Math.min(15000, 800 * 2 ** tries++)); };
       ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (_) { return; } if (m.t === 'hello') me = m.id;
         if (m.t === 'peers' && peersCb && Array.isArray(m.peers)) peersCb({ peers: m.peers.map(p => ({ peer: String(p.peer), presence: p.presence, kind: 'viewer', sameTab: p.peer === me, isMe: false, by: null })) }); };
-    });
+    };
+    connect();
+    return { presence: p => { last = JSON.stringify({ t: 'presence', p }); if (ws && ws.readyState === 1) ws.send(last); return Promise.resolve(); }, onPeers: cb => { peersCb = cb; }, standalone: true, online: () => !!(ws && ws.readyState === 1) };
   }
   async function connectRoom() {
     if (window.claude && window.claude.use) {
@@ -1889,7 +1890,7 @@
       try { room = await window.claude.use('room'); } catch (_) { room = null; }
     }
     if (!userCap && SAVE.nick) ME.nick = SAVE.nick;
-    if (!room && MP_URL) room = await wsRoom(MP_URL);
+    if (!room && MP_URL) room = wsRoom(MP_URL);
     if (!room) return;
     room.onPeers(ch => { syncPeers(ch.peers); }, () => { room = null; });
     setInterval(sendPresence, 120);
@@ -2994,7 +2995,7 @@
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
   $('#sail-go').addEventListener('click', () => { const b = BOATS[sailIdx]; if (!SAVE.owned[b.id]) { if (SAVE.ax < b.price || SAVE.lvl < b.lvl) return; SAVE.ax -= b.price; SAVE.owned[b.id] = 1; SAVE.eq.boat = b.id; SFX.coin(); persist(); renderAll(); renderSail(); return; } closeSail(); });
-  window.HookLineDebug = { S, ME, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; }, endRound: () => endRound() };
+  window.HookLineDebug = { S, ME, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; }, endRound: () => endRound(), mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
 
   /* boot */
   (async () => {

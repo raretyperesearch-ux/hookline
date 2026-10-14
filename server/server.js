@@ -56,6 +56,7 @@ wss.on('connection', (ws, req) => {
     let m; try { m = JSON.parse(buf); } catch { return; }
     if (m && m.t === 'presence' && m.p && typeof m.p === 'object') c.presence = m.p;
   });
+  ws.isAlive = true; ws.on('pong', () => { ws.isAlive = true; });
   ws.on('close', () => { const r = rooms.get(c.room); if (r) { r.delete(c); if (!r.size) rooms.delete(c.room); } });
 });
 
@@ -66,5 +67,8 @@ setInterval(() => {
     for (const c of r) if (c.ws.readyState === 1) c.ws.send(JSON.stringify({ t: 'peers', you: c.id, peers }));
   }
 }, 66);
+
+// keep-alive: ping every 20s, drop sockets that stopped answering
+setInterval(() => { for (const r of rooms.values()) for (const c of r) { if (!c.ws.isAlive) { c.ws.terminate(); continue; } c.ws.isAlive = false; try { c.ws.ping(); } catch (_) { } } }, 20000);
 
 server.listen(PORT, () => console.log(`HookLine multiplayer on :${PORT}`));
