@@ -2,7 +2,24 @@
 // Each client sends {t:'presence', p:{...}} (≤4 KB, ≤20/s); the server keeps the latest presence per
 // connection and broadcasts the room's peer list ~15 times a second. Nothing is persisted.
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { WebSocketServer } = require('ws');
+
+// the game itself is served from ../game so one service is the whole deployment
+const GAME_DIR = path.resolve(process.env.GAME_DIR || path.join(__dirname, '..', 'game'));
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png', '.css': 'text/css', '.svg': 'image/svg+xml', '.ico': 'image/x-icon' };
+function serveStatic(req, res) {
+  let p = decodeURIComponent((req.url || '/').split('?')[0]); if (p === '/' || p === '') p = '/index.html';
+  const file = path.resolve(GAME_DIR, '.' + p);
+  if (!file.startsWith(GAME_DIR + path.sep)) { res.writeHead(403); res.end(); return; }
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) { res.writeHead(404); res.end('not found'); return; }
+    const ext = path.extname(file).toLowerCase();
+    res.writeHead(200, { 'content-type': TYPES[ext] || 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=86400', 'content-length': st.size });
+    fs.createReadStream(file).pipe(res);
+  });
+}
 
 const PORT = +process.env.PORT || 8787;
 const MAX_ROOM = +process.env.MAX_ROOM || 40;          // boats per room before a new room opens
@@ -13,7 +30,8 @@ let seq = 1;
 
 const server = http.createServer((req, res) => {
   if (req.url === '/health') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: [...rooms.values()].reduce((n, r) => n + r.size, 0) })); return; }
-  res.writeHead(404); res.end();
+  if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res);
+  res.writeHead(405); res.end();
 });
 const wss = new WebSocketServer({ server, maxPayload: 8192 });
 

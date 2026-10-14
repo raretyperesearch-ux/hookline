@@ -1,0 +1,9 @@
+{
+  "name": "hookline",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HookLine: the game (game/) and its multiplayer server (server/) in one Node service",
+  "scripts": { "start": "node server/server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "^8.18.0" }
+}
