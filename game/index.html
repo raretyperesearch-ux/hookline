@@ -541,6 +541,26 @@
     .sheet { padding: 8px 10px; } .loadout .gearchip small { display: none; }
   }
   #cast.sailto { background: linear-gradient(180deg, #3aa0e8, #1f6fb8); color: #fff; box-shadow: 0 5px 0 #154c80; font-size: 17px; }
+
+  .realbtn { pointer-events: auto; justify-self: center; display: inline-flex; align-items: center; gap: 7px; background: rgba(6,26,51,.8); color: #fff; border: 2px solid rgba(61,220,151,.7); border-radius: 999px; padding: 6px 14px; font: 400 13px var(--display); letter-spacing: .5px; cursor: pointer; }
+  .realbtn i { width: 8px; height: 8px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 8px #3ddc97; }
+  .realbtn span { font-family: var(--body); font-weight: 800; font-size: 11.5px; color: var(--mist); letter-spacing: 0; }
+  .real { background: radial-gradient(80% 50% at 50% 28%, rgba(61,220,151,.22), transparent 70%), #04142a; align-content: center; z-index: 12; }
+  .real section { display: grid; gap: 10px; justify-items: center; width: 100%; max-width: 340px; animation: scr-in .3s both; }
+  .real p { max-width: 320px; }
+  .real-x { position: absolute; top: 12px; right: 14px; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--line); background: rgba(6,26,51,.8); color: #fff; font-size: 22px; cursor: pointer; }
+  .real-steps { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .real-steps i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 400 13px var(--display); font-style: normal; background: rgba(255,255,255,.12); color: var(--mist); }
+  .real-steps i.on { background: #3ddc97; color: var(--ink); } .real-steps i.done { background: rgba(61,220,151,.4); color: #fff; }
+  .real-steps b { width: 28px; height: 2px; background: rgba(255,255,255,.2); }
+  .real-amts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+  .real-amts button { font: 400 16px var(--display); padding: 9px 0; border-radius: 12px; border: 2px solid var(--line); background: var(--deep); color: #fff; cursor: pointer; }
+  .real-amts button[aria-pressed="true"] { border-color: #3ddc97; background: rgba(61,220,151,.18); }
+  .real-progress { display: grid; gap: 6px; justify-items: center; width: 100%; } .real-progress .lbar { width: 100%; height: 8px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; } .real-progress .lbar i { display: block; height: 100%; width: 0; background: #3ddc97; transition: width .4s; }
+  .real-limits { display: flex; gap: 10px; } .real-limits span { font-size: 12px; font-weight: 800; background: rgba(255,255,255,.08); border-radius: 99px; padding: 3px 10px; }
+  .real-toggle { display: flex; gap: 8px; align-items: center; font-weight: 800; font-size: 13px; }
+  .real-fine { font-size: 11px; color: var(--mist); font-weight: 700; max-width: 320px; }
+  .real-err { color: #ff8a95; font-weight: 800; font-size: 12.5px; max-width: 320px; }
 </style>
 
 <div class="page">
@@ -684,6 +704,7 @@
         <div class="stats" id="sail-stats"></div>
         <div class="swatches" id="sail-colors" aria-label="Coat colour"></div>
         <button class="big-btn reel" id="sail-go" type="button">SET SAIL</button>
+        <button class="realbtn" id="real-open" type="button"><i></i>PLAY FOR REAL · <span id="real-open-t">sign in &amp; add funds</span></button>
       </div>
     </div>
 
@@ -694,6 +715,34 @@
       <div class="steps" id="pd-steps"></div>
       <p class="you" id="pd-you"></p>
       <div class="actions"><button class="big-btn reel" id="pd-close" type="button">NEXT ROUND</button></div>
+    </div>
+
+    <div class="overlay real" id="o-real" hidden>
+      <button class="real-x" id="real-x" type="button" aria-label="Close">×</button>
+      <div class="real-steps"><i data-st="0">1</i><b></b><i data-st="1">2</i><b></b><i data-st="2">3</i></div>
+      <section data-step="0">
+        <h3>Play for real</h3>
+        <p>Every fish becomes a real position on Lighter, in your own account. Sign in to get your wallet: no seed phrase, nothing to install.</p>
+        <button class="big-btn reel" id="real-login" type="button">SIGN IN WITH GOOGLE OR EMAIL</button>
+        <small class="real-fine">Your wallet and your money are yours. HookLine never holds your funds, and you can withdraw on Lighter any time.</small>
+      </section>
+      <section data-step="1" hidden>
+        <h3>Add funds</h3>
+        <p id="real-addr">Your wallet is ready.</p>
+        <div class="real-amts"><button type="button" data-amt="10">$10</button><button type="button" data-amt="20" aria-pressed="true">$20</button><button type="button" data-amt="50">$50</button><button type="button" data-amt="100">$100</button></div>
+        <button class="big-btn kelp" id="real-card" type="button">PAY WITH CARD / APPLE PAY</button>
+        <button class="big-btn ghost" id="real-crypto" type="button">I HAVE USDC</button>
+        <div class="real-progress" id="real-progress" hidden><div class="lbar"><i id="real-pi"></i></div><span id="real-pt">Depositing to Lighter…</span></div>
+      </section>
+      <section data-step="2" hidden>
+        <h3>You're live 🎣</h3>
+        <p>Balance on Lighter: <b id="real-bal">$0.00</b></p>
+        <div class="real-limits"><span>Max bait <b id="real-lim-b">$25</b></span><span>Max leverage <b id="real-lim-l">10×</b></span></div>
+        <label class="real-toggle"><input type="checkbox" id="real-on"> Real fills on: every cast opens a real position</label>
+        <button class="big-btn reel" id="real-go" type="button">START FISHING</button>
+        <small class="real-fine">Trading leveraged perps can lose your whole bait. The knife (stop loss) and net (take profit) are real orders on Lighter.</small>
+      </section>
+      <p class="real-err" id="real-err" hidden></p>
     </div>
 
     <div class="overlay howto" id="o-players" hidden>
@@ -2965,6 +3014,44 @@
     else if (locked) { go.textContent = `UNLOCKS AT LEVEL ${b.lvl}`; go.disabled = true; go.className = 'big-btn ghost'; }
     else { go.innerHTML = `BUY ${img('coin')} ${b.price.toLocaleString('en-US')} AX`; go.disabled = SAVE.ax < b.price; go.className = 'big-btn kelp'; }
   }
+  /* ---------- play for real: sign in (Privy) → add funds (card or USDC) → live on Lighter ----------
+     The page only talks to window.HookLineReal, a small adapter module:
+       status() → { ready, signedIn, address, account, balance, limits }   login()   fund(amountUsd, method)
+       enableTrading()  (registers this device's Lighter trading key with one silent signature)
+       venue()          (a LighterVenue-compatible object that signs orders in the browser)            */
+  let realAmt = 20;
+  const realApi = () => window.HookLineReal || null;
+  function realStep(n) {
+    $$('#o-real section').forEach(sec => { sec.hidden = +sec.dataset.step !== n; });
+    $$('.real-steps i').forEach(i => { const k = +i.dataset.st; i.className = k === n ? 'on' : k < n ? 'done' : ''; });
+    $('#real-err').hidden = true;
+  }
+  function realErr(msg) { const e = $('#real-err'); e.textContent = msg; e.hidden = false; }
+  async function openReal() {
+    $('#o-real').hidden = false; const api = realApi();
+    if (!api) { realStep(0); realErr('Real money mode is being set up (Privy + Lighter). Paper fishing works now; real fills are coming next.'); return; }
+    const st = await api.status(); realStep(!st.signedIn ? 0 : st.balance > 0 ? 2 : 1); renderReal(st);
+  }
+  function renderReal(st) {
+    if (!st) return;
+    if (st.address) $('#real-addr').textContent = `Wallet ${st.address.slice(0, 6)}…${st.address.slice(-4)} is ready. Pick an amount to put on Lighter.`;
+    $('#real-bal').textContent = fmtUSD(st.balance || 0);
+    if (st.limits) { $('#real-lim-b').textContent = fmtUSD(st.limits.maxMargin, 0); $('#real-lim-l').textContent = st.limits.maxLev + '×'; }
+    $('#real-on').checked = !!SAVE.real; $('#real-open-t').textContent = st.signedIn ? (st.balance > 0 ? `${fmtUSD(st.balance)} on Lighter` : 'add funds') : 'sign in & add funds';
+  }
+  async function realLogin() { const api = realApi(); if (!api) return; try { await api.login(); const st = await api.status(); renderReal(st); realStep(st.balance > 0 ? 2 : 1); } catch (e) { realErr(e.message || 'Sign-in was cancelled.'); } }
+  async function realFund(method) {
+    const api = realApi(); if (!api) return; const pr = $('#real-progress'); pr.hidden = false; $('#real-pi').style.width = '10%';
+    try {
+      await api.fund(realAmt, method, (k, msg) => { $('#real-pi').style.width = Math.round(k * 100) + '%'; if (msg) $('#real-pt').textContent = msg; });
+      $('#real-pt').textContent = 'Turning on trading…'; await api.enableTrading();
+      const st = await api.status(); renderReal(st); realStep(2); SFX.win(); confetti(ME.x, ME.z);
+    } catch (e) { realErr(e.message || 'Deposit did not go through.'); } finally { pr.hidden = true; }
+  }
+  function realGo() {
+    const api = realApi(); if (api && $('#real-on').checked) { SAVE.real = true; venue.broker = api.broker ? api.broker() : venue.broker; persist(); toast('Real fills ON. Every cast is a real Lighter position.', 'warn'); }
+    $('#o-real').hidden = true; renderHud();
+  }
   function closeSail() {
     SFX.init(); SFX.ambient();
     S.showcase = false; phone.classList.remove('showcase'); $('#o-sail').hidden = true; S.swoop = 1.8;
@@ -3103,6 +3190,13 @@
   $('#lc-test').addEventListener('click', testRelay);
   $('#lc-real').addEventListener('change', e => { SAVE.real = e.target.checked && !!(venue.broker && venue.broker.ok); if (SAVE.real) toast('Real fills ON: new casts open real Lighter positions within your relay limits.', 'warn'); persist(); renderLighterCard(); renderHud(); });
   $('#sail-nick').addEventListener('input', e => { const v = e.target.value.replace(/[<>]/g, '').trim().slice(0, 16); if (v) { SAVE.nick = v; ME.nick = v; persist(); } });
+  $('#real-open').addEventListener('click', openReal);
+  $('#real-x').addEventListener('click', () => { $('#o-real').hidden = true; });
+  $('#real-login').addEventListener('click', realLogin);
+  $('#o-real').addEventListener('click', e => { const b = e.target.closest('[data-amt]'); if (!b) return; realAmt = +b.dataset.amt; $$('[data-amt]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+  $('#real-card').addEventListener('click', () => realFund('card'));
+  $('#real-crypto').addEventListener('click', () => realFund('crypto'));
+  $('#real-go').addEventListener('click', realGo);
   $('#sail-prev').addEventListener('click', () => { sailIdx = (sailIdx + BOATS.length - 1) % BOATS.length; SFX.tone(660, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
