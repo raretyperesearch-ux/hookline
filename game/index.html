@@ -566,6 +566,9 @@
   .demo-rib { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); background: #ff9f43; }
   .real-links { font-size: 12.5px; font-weight: 800; } .real-links a { color: var(--mist); }
   #h-wallet.realchip { border-color: rgba(61,220,151,.8); cursor: pointer; pointer-events: auto; } #h-wallet.realchip::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 6px #3ddc97; margin-right: 5px; }
+  #cast.waiting { background: linear-gradient(#2d6f9f, #1d4f78); color: #cfeaff; box-shadow: 0 4px 0 #123553; }
+  #cast.strike { background: linear-gradient(#ffe066, #ffb703); color: #3a2400; box-shadow: 0 4px 0 #b86e00; animation: strikepulse .18s ease-in-out infinite alternate; }
+  @keyframes strikepulse { from { transform: scale(1); } to { transform: scale(1.06); } }
   .tag.say { animation: none; z-index: 3; }
   .tag.say.flip > span { left: calc(-50% - 26px); }
   .tag.say.flip > span::after { left: auto; right: -8px; border-right: 0; border-left: 8px solid #fff; border-top-color: transparent; }
@@ -2287,12 +2290,55 @@
     S.cast = { spec, tx, tz, t: 0, zone: zn }; S.mode = 'windup'; S.mt = 0; ME.v = 0;
     $('#tip').hidden = true; renderLive();
   }
+  /* ---------- the bite: a wait that changes every cast, nibbles that tease, then STRIKE ----------
+     Tap during the strike window for a perfect hook (bonus XP, a shot at shiny). Tap too early on a nibble and it
+     spooks: the wait starts over. Do nothing and it still hooks, just without the bonus. Money only moves on the hook. */
+  function planBite(c) {
+    const chum = c.spec.bait === 'chum', frenzy = c.zone === S.frenzyZone, r = Math.random();
+    const at = chum || frenzy ? rand(0.7, 1.4) : r < 0.25 ? rand(0.6, 1.1) : r < 0.85 ? rand(1.6, 3.6) : rand(5, 8);
+    const n = chum ? 0 : at < 1.2 ? 0 : Math.min(4, Math.floor(at / 1.1) + (Math.random() < 0.5 ? 1 : 0));
+    const nibbles = Array.from({ length: n }, () => rand(0.35, at - 0.45)).sort((a, b) => a - b);
+    return { at, nibbles, ni: 0, win: chum ? 1.3 : 0.95, phase: 'wait', st: 0, dunk: 0 };
+  }
+  function tickBite(c, dt) {
+    const b = S.bite, bp = new THREE.Vector3(c.tx, 0, c.tz);
+    b.dunk = Math.max(0, b.dunk - dt * 4);
+    if (b.phase === 'wait') {
+      if (b.ni < b.nibbles.length && S.mt > b.nibbles[b.ni]) { b.ni++; b.dunk = 0.6; b.lastNib = S.mt; SFX.nibble(); foam(c.tx, c.tz, 0.9, 1.1, 0.7); buzz(8); }
+      if (S.mt > b.at) {
+        b.phase = 'strike'; b.st = 0; b.dunk = 1.6;
+        splash3(bp, 1.2); foam(c.tx, c.tz, 2.2, 1.2, 0.9, '#ffffff'); SFX.bite(); buzz([40, 30, 40]); S.shake = Math.max(S.shake, 0.25);
+        worldFloat('STRIKE!', new THREE.Vector3(c.tx, 2.2, c.tz), '#ffd23f'); renderLive();
+        if (!SAVE.strikeTip) { SAVE.strikeTip = 1; persist(); toast('🎣 STRIKE! Tap now to set the hook. Perfect hooks earn bonus XP and a shot at a shiny.'); }
+      }
+    } else if (b.phase === 'strike') {
+      b.st += dt; b.dunk = Math.max(b.dunk, 1.2);
+      if (b.st > b.win) landBite(c, false);
+    }
+  }
+  function landBite(c, perfect) {
+    const bp = new THREE.Vector3(c.tx, 0, c.tz); S.bite = null;
+    splash3(bp, 1.8); geyser(bp, 1); foam(c.tx, c.tz, 3.5, 1.2, 0.9, '#ffffff'); S.shake = 0.5; S.fov = -6; flashScreen('#ffffff', 0.16, 0.9); buzz([30, 40, 60]);
+    if (perfect) {
+      S.hookBonus = true; worldFloat('PERFECT HOOK!', new THREE.Vector3(ME.x, 3.2, ME.z), '#ffd23f'); SFX.tone(1568, 0.14, 'triangle', 0.22);
+      if (!c.spec.shiny && Math.random() < 0.15) { c.spec.shiny = true; setTimeout(() => worldFloat('✦ SHINY! ✦', new THREE.Vector3(c.tx, 3, c.tz), '#fff3a0'), 400); }
+    }
+    hookFish();
+  }
+  function strikeTap() {
+    const b = S.bite, c = S.cast; if (S.mode !== 'wait' || !b || !c) return false;
+    if (b.phase === 'strike') { landBite(c, true); return true; }
+    // too early: it was only nibbling, and now it's spooked
+    worldFloat(b.lastNib != null && S.mt - b.lastNib < 0.5 ? 'Too early! Spooked it' : 'Nothing yet… wait for it', new THREE.Vector3(c.tx, 2, c.tz), '#9ad8ee');
+    SFX.tone(300, 0.12, 'sine', 0.12, 200); S.mt = 0; S.bite = planBite(c); S.bite.at += 0.8; renderLive(); return true;
+  }
   async function hookFish() {
     const c = S.cast; S.mode = 'opening';
     const lev = Math.min(rod().lev, MARKETS[c.spec.market].maxLev);
     const pos = await openFish(c.spec, lev, c.zone);
-    if (!pos) { S.mode = 'idle'; renderLive(); return; }
+    if (!pos) { S.mode = 'idle'; S.hookBonus = false; renderLive(); return; }
     S.active = pos.id; S.mode = 'fight'; S.mt = 0; tutAdvance(2);
+    if (S.hookBonus) { S.hookBonus = false; addXp(15); setTimeout(() => say('perfect'), 900); }
     showFish(pos, c.tx, c.tz); S.fishMeta.leap = 0; say('bite', true);
     renderLive();
   }
@@ -2477,7 +2523,7 @@
     const k = e.key.toLowerCase();
     if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'].includes(k)) { keys.add(k); if (S.tab === 'lake') e.preventDefault(); }
     if (S.showcase) return;
-    if (e.code === 'Space' && S.tab === 'lake') { e.preventDefault(); if (e.repeat) return; if (Math.abs(ME.v) > 4.5 && S.mode === 'idle') tryHop(); else if (S.mode === 'idle') startCharge(); else if (S.mode === 'fight') pullIn(); }
+    if (e.code === 'Space' && S.tab === 'lake') { e.preventDefault(); if (e.repeat) return; if (Math.abs(ME.v) > 4.5 && S.mode === 'idle') tryHop(); else if (S.mode === 'idle') startCharge(); else if (S.mode === 'wait') strikeTap(); else if (S.mode === 'fight') pullIn(); }
     if (/^[1-6]$/.test(e.key) && S.tab === 'lake') sendEmote(+e.key - 1);
     if (k === 'c' && S.tab === 'lake' && S.mode === 'fight') cutLine();
   });
@@ -2692,8 +2738,8 @@
       me.rod.rotation.z = me.rodBase.z + back; me.rod.rotation.x = me.rodBase.x + bend;
     }
     if (S.mode === 'windup' && S.mt > 0.42) { S.mode = 'fly'; S.mt = 0; SFX.tone(500, 0.35, 'sine', 0.2, 1400); }
-    else if (S.mode === 'fly' && S.mt > 0.6) { S.mode = 'wait'; S.mt = 0; splash3(new THREE.Vector3(c.tx, 0, c.tz), 0.6); SFX.noise(0.18, 0.25, 900); S._biteAt = c.zone === S.frenzyZone ? rand(0.3, 0.7) : rand(0.9, 1.7); }
-    else if (S.mode === 'wait' && S.mt > S._biteAt) { const bp = new THREE.Vector3(c.tx, 0, c.tz); splash3(bp, 1.8); geyser(bp, 1); foam(c.tx, c.tz, 3.5, 1.2, 0.9, '#ffffff'); S.shake = 0.5; S.fov = -6; flashScreen('#ffffff', 0.16, 0.9); hookFish(); buzz([30, 40, 60]); }
+    else if (S.mode === 'fly' && S.mt > 0.6) { S.mode = 'wait'; S.mt = 0; splash3(new THREE.Vector3(c.tx, 0, c.tz), 0.6); SFX.noise(0.18, 0.25, 900); S.bite = planBite(c); renderLive(); }
+    else if (S.mode === 'wait' && S.bite) tickBite(c, dt);
     else if (S.mode === 'pull' && S.mt > 1.3) { if (S.fishObj) { scene.remove(S.fishObj); S.fishObj = null; } nextActive(); }
     else if (S.mode === 'snap' && S.mt > 1.0) { if (S.fishObj) { scene.remove(S.fishObj); S.fishObj = null; } nextActive(); }
     else if (S.mode === 'kraken' && S.mt > 2.4) { if (S.fishObj) { scene.remove(S.fishObj); S.fishObj = null; } nextActive(); }
@@ -2703,7 +2749,7 @@
       S.bobber.visible = true; S.bobber.position.set(x, y, z); setLine(S.line, tip, S.bobber.position, 0); S.line.material.color.setRGB(1.6, 1.6, 1.6);
       emit(PS.glow, 2, () => ({ x: x + rand(-0.1, 0.1), y, z: z + rand(-0.1, 0.1), vy: -0.3, life: 0.45, kind: 1, s0: 0.5, s1: 0.05, r: 2.6, g: 2.4, b: 1.4 }));
     } else if ((S.mode === 'wait' || S.mode === 'opening') && tip) {
-      const dunk = S.mode === 'opening' ? -0.25 : (Math.sin(S.mt * 9) > 0.92 ? -0.12 : 0);
+      const bb = S.bite, dunk = S.mode === 'opening' ? -0.25 : bb ? -Math.min(bb.dunk, 1) * (bb.phase === 'strike' ? 0.55 + Math.sin(S.time * 40) * 0.08 : 0.22) : 0;
       S.bobber.visible = true; S.bobber.position.set(c.tx, 0.12 + Math.sin(S.time * 3) * 0.04 + dunk, c.tz); setLine(S.line, tip, S.bobber.position, 0.6);
       if (Math.random() < dt * 1.6) foam(c.tx, c.tz, 0.7, 1.3, 0.6);
       if (S.mode === 'opening' && Math.random() < dt * 30) splash3(new THREE.Vector3(c.tx + rand(-0.5, 0.5), 0, c.tz + rand(-0.5, 0.5)), 0.25);
@@ -3062,13 +3108,14 @@
     const fightView = S.active && ['fight', 'pull', 'snap', 'kraken'].includes(S.mode);
     showPanel(fightView ? 'fight' : 'main');
     const full = ps.length >= cap;
-    const cb = $('#cast'); cb.disabled = casting || full;
-    cb.textContent = casting ? 'CASTING…' : full ? 'CHEST FULL' : ps.length ? 'CAST ANOTHER LINE' : 'CAST';
+    const cb = $('#cast'), waiting = S.mode === 'wait' && S.bite; cb.disabled = casting || full;
+    cb.textContent = waiting ? (S.bite.phase === 'strike' ? 'STRIKE!' : 'WAIT FOR IT…') : casting ? 'CASTING…' : full ? 'CHEST FULL' : ps.length ? 'CAST ANOTHER LINE' : 'CAST';
     const lev = rod().lev;
     const why = castBlocker();
     const nz = nearestZone();
     if (!casting && !full && why) cb.textContent = why === 'Slow down to cast' ? 'SLOW DOWN TO CAST' : why === 'Not enough margin' ? 'NOT ENOUGH MARGIN' : why === 'Not enough on Lighter' ? `LOWER BAIT OR ADD FUNDS · ${fmtUSD(S.realAvail || 0)} FREE` : `⛵ SAIL TO ${nz.z.name.toUpperCase()} · ${Math.round(nz.d)}m`;
-    cb.disabled = casting || (!!why && !!S.zone && why !== 'Not enough on Lighter');
+    cb.disabled = (casting && !waiting) || (!casting && !!why && !!S.zone && why !== 'Not enough on Lighter');
+    cb.classList.toggle('strike', !!(waiting && S.bite.phase === 'strike')); cb.classList.toggle('waiting', !!(waiting && S.bite.phase !== 'strike'));
     cb.classList.toggle('sailto', !S.zone && !casting);
     $('#cast-note').textContent = full ? `All ${cap} lines are out. Pull one in, cut one, or get a bigger chest in Gear.`
       : !S.zone ? 'Drive into a glowing zone. Each one holds different markets; Open Water has them all.'
@@ -3392,7 +3439,7 @@
   }
 
   /* input */
-  $('#cast').addEventListener('pointerdown', e => { e.preventDefault(); if (S.zone && S.mode === 'idle' && castBlocker() === 'Not enough on Lighter') { openReal(); realStep(1); return; } if (!S.zone && S.mode === 'idle') { S.goTo = nearestZone().z; toast(`Follow the arrow to ${S.goTo.name}.`, 'good'); SFX.tone(660, 0.08, 'triangle', 0.15); return; } startCharge(); });
+  $('#cast').addEventListener('pointerdown', e => { e.preventDefault(); if (strikeTap()) return; if (S.zone && S.mode === 'idle' && castBlocker() === 'Not enough on Lighter') { openReal(); realStep(1); return; } if (!S.zone && S.mode === 'idle') { S.goTo = nearestZone().z; toast(`Follow the arrow to ${S.goTo.name}.`, 'good'); SFX.tone(660, 0.08, 'triangle', 0.15); return; } startCharge(); });
   $('#cast').addEventListener('pointerup', releaseCharge); $('#cast').addEventListener('pointerleave', releaseCharge);
   $('#cast').addEventListener('keydown', e => { if (e.key === 'Enter') castLine(); });
   $('#castmore').addEventListener('click', () => { if (S.mode === 'fight') { S.mode = 'idle'; S.active = null; renderLive(); } });
@@ -3401,7 +3448,7 @@
   // tap a sonar fish to aim the next cast at it
   // tap a sonar fish to aim the next cast at it
   stage.addEventListener('pointerdown', e => {
-    SFX.init();
+    SFX.init(); if (S.mode === 'wait' && S.bite && S.bite.phase === 'strike') { strikeTap(); return; }
     if (S.mode !== 'idle' || !SAVE.sonar || !S.zone) return;
     const r = stage.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
     let best = null, bd = 50;
