@@ -64,3 +64,9 @@ To turn on real (testnet) fills, add these variables to the **relay** service in
 `LIGHTER_ACCOUNT_INDEX`, `LIGHTER_API_PRIVATE_KEY` (and `LIGHTER_API_KEY_INDEX` if not 3), `HOOKLINE_RELAY_TOKEN` (any long random string).
 Then in the game: Gear → Lighter connection → paste the token → Test relay → Real fills.
 In real mode the relay's markets are priced from the relay's own network (`/v1/prices`), so testnet PnL is honest.
+
+## Play for real (Privy + Lighter, in the browser)
+
+- `game/hookline-real.js` is the real adapter: Privy sign-in (`game/hookline-auth/`, built from `auth/`), Lighter's official WASM signer in a Web Worker (`game/lighter/`), and the device's Lighter API key kept encrypted in IndexedDB. Trades go from the player's browser straight to Lighter; HookLine never holds keys or funds.
+- It turns on when the game service has `PRIVY_APP_ID` set (served to the page via `/config.js`); without it the game keeps the clearly-labeled DEMO adapter.
+- `LIGHTER_NET` (default `testnet`). Testnet funding uses Lighter's faucet via `/api/faucet`. Mainnet deposits (Universal Deposit Address, needs a Lighter builder key) are a TODO at `/api/deposit-address`.

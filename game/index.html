@@ -888,6 +888,8 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="config.js"></script>
+<script src="hookline-real.js"></script>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
@@ -3113,6 +3115,7 @@
     $('#o-real').hidden = false; const api = realApi(); $('#real-demo-rib').hidden = !(api && api.demo);
     if (!api) { realStep(0); realErr('Real money mode is being set up (Privy + Lighter). Paper fishing works now; real fills are coming next.'); return; }
     const st = await api.status(); realStep(!st.signedIn ? 0 : st.balance > 0 ? 2 : 1); renderReal(st);
+    if (st.ready === false) realErr(st.error || 'Sign-in is not available right now. Paper fishing still works.');
   }
   function renderReal(st) {
     if (!st) return;

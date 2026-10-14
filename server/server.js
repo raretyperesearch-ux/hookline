@@ -77,6 +77,13 @@ const server = http.createServer((req, res) => {
     return sendJson(res, 404, { ok: false, error: 'not found' });
   }
   if (req.url === '/health') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: [...rooms.values()].reduce((n, r) => n + r.size, 0) })); return; }
+  // public runtime config for the page (the Privy app ID is public by design; secrets never go here)
+  if (req.url === '/config.js') {
+    const cfg = { HOOKLINE_PRIVY_APP_ID: process.env.PRIVY_APP_ID || '', HOOKLINE_PRIVY_CLIENT_ID: process.env.PRIVY_CLIENT_ID || '', HOOKLINE_LIGHTER_NET: process.env.LIGHTER_NET || 'testnet' };
+    res.writeHead(200, { 'content-type': 'text/javascript', 'cache-control': 'no-cache' });
+    res.end(Object.entries(cfg).map(([k, v]) => `window.${k} = window.${k} || ${JSON.stringify(v)};`).join('\n'));
+    return;
+  }
   if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(req, res);
   res.writeHead(405); res.end();
 });
