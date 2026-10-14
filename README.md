@@ -29,7 +29,7 @@ The relay enforces `MAX_MARGIN_USD`, `MAX_LEVERAGE` and `ALLOWED_MARKETS` server
 
 ```bash
 cd hookline/relay
-pip install -r requirements.txt
+pip install -r requirements.txt   # lighter-sdk from PyPI
 cp .env.example .env   # fill in LIGHTER_ACCOUNT_INDEX, LIGHTER_API_KEY_INDEX, LIGHTER_API_PRIVATE_KEY, HOOKLINE_RELAY_TOKEN
 set -a; . ./.env; set +a
 uvicorn app:app --port 8080
