@@ -2059,17 +2059,25 @@
   // recorded voice pack: voice/manifest.json maps "bite_0" -> ["bite_0_a.mp3", ...]; clips decode on first use
   const VPACK = { map: null, buf: new Map() };
   fetch('voice/manifest.json').then(r => r.ok ? r.json() : null).then(m => { VPACK.map = m; }).catch(() => { });
-  function playClip(id) {
+  function playClip(id, vol = 1, rate = 1, own = true) {
     const files = VPACK.map && VPACK.map[id]; if (!files || !files.length || !SFX.ac) return false;
-    const file = pick(files), go = b => { try { if (VOICE.src) VOICE.src.stop(); } catch (_) { } const src = SFX.ac.createBufferSource(), g = SFX.ac.createGain(); g.gain.value = 2.6; src.buffer = b; src.playbackRate.value = 0.97 + Math.random() * 0.08; src.connect(g); g.connect(SFX.master); src.start(); VOICE.src = src; };
+    const file = pick(files), go = b => { if (own) try { if (VOICE.src) VOICE.src.stop(); } catch (_) { } const src = SFX.ac.createBufferSource(), g = SFX.ac.createGain(); g.gain.value = 2.6 * vol; src.buffer = b; src.playbackRate.value = rate * (0.97 + Math.random() * 0.08); src.connect(g); g.connect(SFX.master); src.start(); if (own) VOICE.src = src; };
     const have = VPACK.buf.get(file); if (have) { if (have !== 'loading') go(have); return true; }
     VPACK.buf.set(file, 'loading');
     fetch('voice/' + file).then(r => r.arrayBuffer()).then(a => SFX.ac.decodeAudioData(a)).then(b => { VPACK.buf.set(file, b); go(b); }).catch(() => VPACK.buf.delete(file));
     return true;
   }
+  const RIVAL_V = { last: 0 };
+  function rivalSay(e, id, rate) {
+    const cut = id.lastIndexOf('_'), text = (LINES[id.slice(0, cut)] || [])[+id.slice(cut + 1)]; if (!text) return;
+    e.say = { text, t: 0 };
+    const d = Math.hypot(e.x - ME.x, e.z - ME.z), now = performance.now();
+    if (d < 45 && SFX.on && !SAVE.voiceOff && now - RIVAL_V.last > 2500) { RIVAL_V.last = now; playClip(id, 0.75 * (1 - d / 45) + 0.1, rate, false); }
+  }
+  function botSay(b, key) { const list = LINES[key]; if (list && Math.random() < 0.7) rivalSay(b, `${key}_${Math.floor(Math.random() * list.length)}`, b.vrate || (b.vrate = rand(1.08, 1.22))); }
   function say(key, force) {
     const now = performance.now(); if (!force && now - VOICE.last < 3800) return; const list = LINES[key]; if (!list) return;
-    VOICE.last = now; const idx = Math.floor(Math.random() * list.length), text = list[idx]; S.bubble = { text, t: 0 };
+    VOICE.last = now; const idx = Math.floor(Math.random() * list.length), text = list[idx]; S.bubble = { text, t: 0 }; S.lastSay = { id: `${key}_${idx}`, t: Date.now() };
     if (!SFX.on || SAVE.voiceOff) return;
     if (playClip(`${key}_${idx}`)) return;                       // recorded voice pack when present
     if (!window.speechSynthesis) return;
@@ -2103,7 +2111,7 @@
     if (!room) return;
     const p = activePos(), f = p ? pnlFrac(p) : 0;
     const fishP = S.fishObj ? S.fishObj.position : null;
-    room.presence({ rid: S.round.id, rs: +S.round.score.toFixed(4), cr: S.round.crown ? 1 : 0, em: ME.em || null, zn: S.zone ? S.zone.id : null, b: SAVE.eq.boat, x: +ME.x.toFixed(2), z: +ME.z.toFixed(2), h: +ME.h.toFixed(3), v: +ME.v.toFixed(2), c: SAVE.coat || ME.color, n: ME.nick, st: S.mode, mk: p ? p.market : null, sd: p ? p.side : 0, lv: p ? p.leverage : 0, pnl: +f.toFixed(4), fx: fishP ? +fishP.x.toFixed(1) : null, fz: fishP ? +fishP.z.toFixed(1) : null, ses: +S.session.toFixed(2), sk: +(S.sink || 0).toFixed(2), ev: S.lastEv || null }).catch(() => { });
+    room.presence({ rid: S.round.id, rs: +S.round.score.toFixed(4), cr: S.round.crown ? 1 : 0, em: ME.em || null, zn: S.zone ? S.zone.id : null, b: SAVE.eq.boat, x: +ME.x.toFixed(2), z: +ME.z.toFixed(2), h: +ME.h.toFixed(3), v: +ME.v.toFixed(2), c: SAVE.coat || ME.color, n: ME.nick, st: S.mode, mk: p ? p.market : null, sd: p ? p.side : 0, lv: p ? p.leverage : 0, pnl: +f.toFixed(4), fx: fishP ? +fishP.x.toFixed(1) : null, fz: fishP ? +fishP.z.toFixed(1) : null, ses: +S.session.toFixed(2), vo: S.lastSay && Date.now() - S.lastSay.t < 4000 ? S.lastSay : null, sk: +(S.sink || 0).toFixed(2), ev: S.lastEv || null }).catch(() => { });
   }
   // standalone multiplayer: the HookLine server (hookline/server) speaks the same presence shape as claude.ai rooms
   // ?mp= or window.HOOKLINE_MP, else the server this page came from (the HookLine server serves both)
@@ -2182,13 +2190,14 @@
         const dx = b.gx - b.x, dz = b.gz - b.z, d = Math.hypot(dx, dz);
         const th = Math.atan2(dz, dx); b.h += clamp(angDiff(th, b.h), -dt * 1.5, dt * 1.5);
         b.v = lerp(b.v, d > 4 ? 7 : 0, dt * 1.2);
-        if (d < 4 && b.v < 0.6) { b.mode = 'fish'; b.t = 0; b.pnl = 0; b.side = Math.random() < 0.5 ? 1 : -1; b.fish = b.fish || makeFish(weightedPick(b.goal.mk), false); b.fish.visible = true; b.fish.position.set(b.x, -0.2, b.z); }
+        if (d < 4 && b.v < 0.6) { b.mode = 'fish'; b.t = 0; b.pnl = 0; b.side = Math.random() < 0.5 ? 1 : -1; b.fish = b.fish || makeFish(weightedPick(b.goal.mk), false); b.fish.visible = true; b.fish.position.set(b.x, -0.2, b.z); botSay(b, 'bite'); }
       } else {
         b.v = lerp(b.v, 0, dt * 2); b.pnl += gauss() * 0.02 + 0.002;
         // a losing bot gets dragged off by its fish and starts to ship water, same as you
         if (b.fh == null) b.fh = b.h; b.fh += Math.sin(b.t * 0.7 + b.x) * dt * 0.6;
         const sev = clamp(-b.pnl / 0.3, 0, 1), reach = b.pnl < 0 ? 7 + sev * 7 : Math.max(3.5, 7 - b.pnl * 12);
         if (b.pnl < 0) { const tx = clamp(b.x + Math.cos(b.fh) * sev * 4 * dt, -WORLD + 8, WORLD - 8), tz = clamp(b.z + Math.sin(b.fh) * sev * 4 * dt, -WORLD + 8, WORLD - 8); if (!ISLANDS.some(([n, x, z, sc]) => Math.hypot(tx - x, tz - z) < isRadius[n] * sc + 3)) { b.x = tx; b.z = tz; } b.h += angDiff(b.fh, b.h) * dt * 1.5; }
+        if (b.pnl < -0.2 && !b.saidSink) { b.saidSink = true; botSay(b, Math.random() < 0.5 ? 'sinking' : 'towed'); }
         b.boat.sink = lerp(b.boat.sink || 0, clamp((-b.pnl - 0.12) / 0.2, 0, 0.8), dt * 2);
         const fx = b.x + Math.cos(b.fh) * reach, fz = b.z + Math.sin(b.fh) * reach;
         b.fish.scale.setScalar(1.7); b.fish.position.x = lerp(b.fish.position.x, fx + Math.sin(b.t * 2) * 0.6, Math.min(1, dt * 4)); b.fish.position.z = lerp(b.fish.position.z, fz + Math.cos(b.t * 1.7) * 0.6, Math.min(1, dt * 4)); if (b.jump == null) b.fish.position.y = -0.2;
@@ -2196,9 +2205,10 @@
         b.boat.ring.material.color.set(b.pnl >= 0 ? '#3ddc97' : '#ff6b70'); b.boat.ring.material.opacity = 0.6;
         if (b.t > rand(9, 16) || b.pnl > 0.3 || b.pnl < -0.3) {
           b.rs = (b.rs || 0) + b.pnl;
+          botSay(b, b.pnl > 0 ? 'win' : 'cut');
           if (b.pnl > 0) { showEmote('bot-' + b.name, Math.random() < 0.5 ? 4 : 1, () => new THREE.Vector3(b.x, 6.6, b.z)); splash3(b.fish.position, 1); worldFloat(`${b.name.replace(' (bot)', '')} landed +${Math.round(b.pnl * 100)}%`, b.fish.position, '#3ddc97'); }
           if (b.pnl <= 0) showEmote('bot-' + b.name, 3, () => new THREE.Vector3(b.x, 6.6, b.z));
-          b.fish.visible = false; b.line.visible = false; b.boat.ring.material.opacity = 0; b.boat.sink = 0; b.fh = null; b.jump = null; b.mode = 'drive'; b.goal = pick(ZONES.filter(z => !z.practice));
+          b.fish.visible = false; b.line.visible = false; b.boat.ring.material.opacity = 0; b.boat.sink = 0; b.fh = null; b.jump = null; b.saidSink = false; b.mode = 'drive'; b.goal = pick(ZONES.filter(z => !z.practice));
         }
       }
       b.x += Math.cos(b.h) * b.v * dt; b.z += Math.sin(b.h) * b.v * dt;
@@ -2235,6 +2245,7 @@
       const tx = clamp(+pr.x || 0, -WORLD, WORLD), tz = clamp(+pr.z || 0, -WORLD, WORLD);
       e.x = lerp(e.x, tx, Math.min(1, dt * 8)); e.z = lerp(e.z, tz, Math.min(1, dt * 8)); if (e.boat) e.boat.sink = lerp(e.boat.sink || 0, clamp(+pr.sk || 0, 0, 1), Math.min(1, dt * 2)); e.h += angDiff(+pr.h || 0, e.h) * Math.min(1, dt * 8);
       placeBoat(e.boat, e.x, e.z, e.h, +pr.v || 0, S.time);
+      if (pr.vo && typeof pr.vo.id === 'string' && pr.vo.t !== e.voT) { e.voT = pr.vo.t; if (Date.now() - pr.vo.t < 4000) rivalSay(e, pr.vo.id, 1); }
       const fighting = pr.st === 'fight' && typeof pr.fx === 'number';
       if (fighting) {
         if (!e.fish || e.fishMk !== pr.mk) { if (e.fish) scene.remove(e.fish); e.fish = makeFish(MARKETS[pr.mk] ? pr.mk : 'ETH', false); e.fishMk = pr.mk; }
@@ -2842,8 +2853,10 @@
     // other players
     for (const [k, e] of peers) {
       const pr = e.presence || {}, pn = +pr.pnl || 0, fighting = pr.st === 'fight';
+      if (e.say && (e.say.t += S.dt) < 2.8) tag('peer-say-' + k, 'say', `<span>${esc(e.say.text)}</span>`, new THREE.Vector3(e.x, 4.4, e.z));
       tag('peer-' + k, 'name' + (fighting ? (pn >= 0 ? ' up' : ' down') : ''), `${pr.cr ? '👑 ' : ''}${esc(e.name)}${e.isMe ? ' (your other tab)' : ''}${fighting && typeof pr.mk === 'string' ? ` · ${esc(pr.mk.slice(0, 5))} ${fmtPct(pn)}` : ''}`, new THREE.Vector3(e.x, 3.6, e.z));
     }
+    if (peers.size === 0) for (const b of S.bots) if (b.say && (b.say.t += S.dt) < 2.8) tag('bot-say-' + b.name, 'say', `<span>${esc(b.say.text)}</span>`, new THREE.Vector3(b.x, 4.4, b.z));
     if (peers.size === 0) for (const b of S.bots) tag('bot-' + b.name, 'name bot' + (b.mode === 'fish' ? (b.pnl >= 0 ? ' up' : ' down') : ''), `${esc(b.name)}${b.mode === 'fish' ? ' · ' + fmtPct(b.pnl) : ''}`, new THREE.Vector3(b.x, 3.6, b.z));
     // emotes over boats
     S.emotes = S.emotes.filter(e => (e.t += S.dt) < 2.2);
