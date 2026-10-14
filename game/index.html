@@ -566,6 +566,11 @@
   .demo-rib { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); background: #ff9f43; }
   .real-links { font-size: 12.5px; font-weight: 800; } .real-links a { color: var(--mist); }
   #h-wallet.realchip { border-color: rgba(61,220,151,.8); cursor: pointer; pointer-events: auto; } #h-wallet.realchip::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 6px #3ddc97; margin-right: 5px; }
+  .tag.say { animation: none; z-index: 3; }
+  .tag.say > span { display: block; position: relative; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
+  .tag.say > span::after { content: ''; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #fff; }
+  .xclose { position: sticky; top: 0; justify-self: end; z-index: 3; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--line); background: rgba(6,26,51,.9); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
+  .overlay > .xclose { position: absolute; top: 12px; right: 14px; }
 </style>
 
 <div class="page">
@@ -650,6 +655,7 @@
     </div>
 
     <section class="screen" id="s-chest" hidden aria-label="Chest">
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h2>Your chest</h2>
       <div class="tank-top"><img id="t-chest" src="art/chest1.webp" alt=""><dl>
         <dt>Slots</dt><dd id="t-slots">–</dd>
@@ -663,6 +669,7 @@
     </section>
 
     <section class="screen" id="s-gear" hidden aria-label="Gear">
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h2>Gear</h2>
       <p class="sub">Everything here is bought with AX. Gear changes how you fish, not the market.</p>
       <div class="lighter-card" id="lighter-card">
@@ -678,12 +685,14 @@
     </section>
 
     <section class="screen" id="s-dex" hidden aria-label="Fishdex">
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h2>Fishdex</h2>
       <p class="sub" id="dex-sub">Every Lighter market has its own fish. Shiny ones are rare.</p>
       <div class="dex" id="dex"></div>
     </section>
 
     <section class="screen" id="s-quests" hidden aria-label="Quests">
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h2>Today's quests</h2>
       <p class="sub" id="q-sub">New quests every day. Smart fishing pays: cutting losers early counts.</p>
       <div id="quests" style="display:grid;gap:6px"></div>
@@ -693,6 +702,7 @@
     </section>
 
     <section class="screen" id="s-lakes" hidden aria-label="Lakes">
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h2>Lakes</h2>
       <p class="sub">Each lake holds different markets. Your chest comes with you.</p>
       <div id="lake-list" style="display:grid;gap:8px"></div>
@@ -714,6 +724,7 @@
     </div>
 
     <div class="overlay podium" id="o-podium" hidden>
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <div class="rays"></div>
       <span class="ribbon">ROUND OVER</span>
       <h3 id="pd-title">Round results</h3>
@@ -762,6 +773,7 @@
     </div>
 
     <div class="overlay howto" id="o-players" hidden>
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h3 style="font-size:28px">Your crew on the water</h3>
       <p id="players-note"></p>
       <div class="lobby-stats" id="lobby-stats"></div>
@@ -770,6 +782,7 @@
     </div>
 
     <div class="overlay reveal" id="o-reveal" hidden>
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <div class="rays" id="rv-rays"></div>
       <div class="leap" id="rv-art"></div>
       <span class="ribbon" id="rv-ribbon">SHINY!</span>
@@ -780,6 +793,7 @@
     </div>
 
     <div class="overlay levelup" id="o-level" hidden>
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <div class="rays" style="--ray: rgba(255,255,255,.14)"></div>
       <img class="star" src="art/star.webp" alt="">
       <h3 id="lv-title">Level 4!</h3>
@@ -788,6 +802,7 @@
     </div>
 
     <div class="overlay kraken-ov" id="o-kraken" hidden>
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <img src="art/kraken.webp" alt="">
       <h3>The Kraken got it</h3>
       <span class="meta" id="kr-meta"></span>
@@ -796,6 +811,7 @@
     </div>
 
     <div class="overlay howto" id="o-howto" hidden>
+      <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h3 style="font-size:28px">How HookLine works</h3>
       <div class="map">
         <div><img src="art/tuna.webp" alt=""><span><b>Fish = a leveraged position</b>Every fish that bites is a long or short on a Lighter perp market. You choose whether to reel it in.</span></div>
@@ -1945,7 +1961,7 @@
         r.cool = 25; ME.boost = Math.min(1, ME.boost + 0.45); S.ringCombo = (S.time - (S.lastRing || -99) < 6) ? (S.ringCombo || 1) + 1 : 1; S.lastRing = S.time;
         const p = new THREE.Vector3(r.x, 1.9, r.z); emit(PS.glow, 40, () => { const a = rand(0, 6.283), sp = rand(2, 6); return { x: r.x, y: 1.9, z: r.z, vx: Math.cos(a) * sp, vz: Math.sin(a) * sp, vy: rand(-1, 4), drag: 1, life: 0.8, kind: 1, s0: 0.7, s1: 0.1, r: 0.8, g: 2.8, b: 3.2 }; });
         foam(r.x, r.z, 4, 1, 0.8, '#5fe0ff'); S.fov = -4; buzz(20); SFX.tone(880 + S.ringCombo * 110, 0.12, 'triangle', 0.2); SFX.tone(1320 + S.ringCombo * 110, 0.14, 'sine', 0.15, null, 0.06);
-        worldFloat(S.ringCombo > 1 ? `RING x${S.ringCombo}!` : 'BOOST +', p, '#5fe0ff'); addXp(2 * S.ringCombo); if (S.ringCombo >= 3) quest('rings', 1);
+        worldFloat(S.ringCombo > 1 ? `RING x${S.ringCombo}!` : 'BOOST +', p, '#5fe0ff'); addXp(2 * S.ringCombo); if (S.ringCombo >= 3) { quest('rings', 1); say('rings'); }
       }
     }
   }
@@ -1973,7 +1989,7 @@
       const w = waveAt(b.x, b.z); b.g.position.set(b.x, w.y + 0.15, b.z); b.g.rotation.set(Math.sin(S.time * 1.7 + b.x) * 0.25, S.time * 0.4 + b.z, Math.sin(S.time * 1.3 + b.z) * 0.2);
       if (Math.hypot(ME.x - b.x, ME.z - b.z) < 3) {
         const l = pick(LOOT); l.f(); persist(); renderAll(); splash3(new THREE.Vector3(b.x, 0, b.z), 0.8); rayBurst(new THREE.Vector3(b.x, 1.5, b.z), '#7fffd4', 1.2, 8);
-        SFX.land(); buzz([20, 30, 20]); toast(l.t, 'good'); worldFloat('LOOT!', new THREE.Vector3(b.x, 2, b.z), '#7fffd4'); quest('loot', 1); placeBottle(b);
+        SFX.land(); buzz([20, 30, 20]); toast(l.t, 'good'); worldFloat('LOOT!', new THREE.Vector3(b.x, 2, b.z), '#7fffd4'); quest('loot', 1); say('loot'); placeBottle(b);
       }
     }
   }
@@ -1990,7 +2006,7 @@
     if (ME.hopY <= 0) {
       ME.hopY = 0; const turns = Math.floor(Math.abs(ME.spinAcc) / (Math.PI * 1.6)); ME.spin = 0; ME.h += ME.spinAcc * 0; ME.spinAcc = 0;
       splash3(new THREE.Vector3(ME.x, 0, ME.z), 1.2); foam(ME.x, ME.z, 4, 1.2, 0.9); S.shake = Math.max(S.shake, 0.25); buzz(30);
-      if (turns > 0) { const xp = 15 * turns; addXp(xp); worldFloat(turns > 1 ? `${turns}x SPIN! +${xp} XP` : `SPIN TRICK! +${xp} XP`, new THREE.Vector3(ME.x, 3, ME.z), '#ff9df0'); SFX.win(); quest('trick', 1); }
+      if (turns > 0) { const xp = 15 * turns; addXp(xp); worldFloat(turns > 1 ? `${turns}x SPIN! +${xp} XP` : `SPIN TRICK! +${xp} XP`, new THREE.Vector3(ME.x, 3, ME.z), '#ff9df0'); SFX.win(); quest('trick', 1); say('trick'); }
     }
   }
   // dolphins race you when you boost through open water
@@ -2006,6 +2022,47 @@
       if (ph < 0.05 || (ph > 0.88 && ph < 0.93)) splash3(new THREE.Vector3(x, 0, z), 0.35);
       d.o.position.set(x, y, z); d.o.rotation.set(0, -ME.h, (0.45 - ph / 2) * 1.6 * (jump > 0 ? 1 : 0));
     }
+  }
+
+  /* ================= the fisherman talks: speech bubble + the browser's voice ================= */
+  const LINES = {
+    sail: ['Anchors up!', 'Let\'s catch some green.', 'Somethin\'s bitin\' today.'],
+    bite: ['I\'m on \'em, boys!', 'Fish on!', 'Gotcha!', 'Here we go, here we go!', 'Hooked one!'],
+    green: ['She\'s comin\' in!', 'Reel it, reel it!', 'That\'s a good fish.', 'Easy money.'],
+    big: ['That\'s a MONSTER!', 'Get the net!', 'Don\'t let go now!', 'Ohhh, she\'s a big one!'],
+    red: ['Easy… easy…', 'Don\'t you dare.', 'Come back here!', 'Hold on, hold on…'],
+    towed: ['She\'s draggin\' me out!', 'Whoa whoa whoa!', 'Where\'re you takin\' me?!', 'This fish has a motor!'],
+    sinking: ['We\'re takin\' on water!', 'Bail! BAIL!', 'Boat\'s goin\' down!'],
+    cutit: ['Cut it! CUT IT!', 'Abandon ship!', 'Not like this!'],
+    win: ['Into the bucket!', 'Dinner\'s served!', 'Ka-ching!', 'That\'s how it\'s done.', 'Another one!'],
+    cut: ['Not today.', 'Snip snip.', 'Live to fish another day.', 'Next!'],
+    kraken: ['KRAKEN!!', 'Nooooo!', 'Not the Kraken!'],
+    boost: ['Yeehaw!', 'Full throttle!', 'Woo!'],
+    perfect: ['Nailed it.', 'Right on the money.', 'Chef\'s kiss.'],
+    rings: ['Ring ring ring!', 'Speed demon!'],
+    trick: ['Did y\'all see that?!', 'Ten out of ten!'],
+    loot: ['Ooh, treasure!', 'Finders keepers!'],
+  };
+  const VOICE = { last: 0, voice: null, picked: false };
+  function pickVoice() {
+    if (VOICE.picked || !window.speechSynthesis) return; const vs = speechSynthesis.getVoices(); if (!vs.length) return; VOICE.picked = true;
+    const prefer = ['Rocko', 'Grandpa', 'Fred', 'Daniel', 'Google UK English Male', 'Microsoft Guy', 'Microsoft David', 'Alex', 'Aaron', 'Arthur'];
+    VOICE.voice = prefer.map(n => vs.find(v => v.name.startsWith(n) && /^en/i.test(v.lang))).find(Boolean) || vs.find(v => /^en[-_]US/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+  }
+  if (window.speechSynthesis) { speechSynthesis.onvoiceschanged = pickVoice; pickVoice(); }
+  function say(key, force) {
+    const now = performance.now(); if (!force && now - VOICE.last < 3800) return; const list = LINES[key]; if (!list) return;
+    VOICE.last = now; const text = pick(list); S.bubble = { text, t: 0 };
+    if (!SFX.on || !window.speechSynthesis || SAVE.voiceOff) return;
+    try { pickVoice(); speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text.replace(/…/g, '...')); if (VOICE.voice) u.voice = VOICE.voice; u.rate = 1.08; u.pitch = 0.85; u.volume = 0.9; speechSynthesis.speak(u); } catch (_) { }
+  }
+  // per-fish reactions as the fight swings
+  function fightVoice() {
+    const p = activePos(); if (!p || S.mode !== 'fight' || !S.fishMeta || S.fishMeta.leap < 0.85) return;
+    const f = pnlFrac(p), vf = S.voiceFlags || (S.voiceFlags = {});
+    const once = (k, cond, line) => { if (cond && !vf[k]) { vf[k] = true; say(line); } };
+    once('cutit', f < -0.6, 'cutit'); once('sinking', (S.sink || 0) > 0.3, 'sinking'); once('towed', (S.tension || 0) > 0.6 && Math.hypot(ME.vx, ME.vz) > 2.2, 'towed');
+    once('red', f < -0.08, 'red'); once('big', f > 0.3, 'big'); once('green', f >= PULL_MIN, 'green');
   }
 
   /* ================= emotes ================= */
@@ -2127,10 +2184,11 @@
   function placeBoat(bt, x, z, h, v, t) {
     const w = waveAt(x, z), ch = Math.cos(h), sh = Math.sin(h), sf = w.gx * ch + w.gz * sh, sl = -w.gx * sh + w.gz * ch;
     const me = bt === S.me, hop = me ? (ME.hopY || 0) : 0;
-    bt.group.position.set(x, w.y * 0.9 - 0.05 + hop, z);
+    const sink = me ? (S.sink || 0) : 0;
+    bt.group.position.set(x, w.y * 0.9 - 0.05 + hop - sink * 0.9, z);
     const lean = me ? clamp(ME.turn * Math.abs(v) * 0.012, -0.22, 0.22) : 0, plane = clamp(v, -8, 16) * 0.007 + (me && ME.boosting ? 0.06 : 0);
     bt.group.rotation.order = 'YXZ';
-    bt.group.rotation.set(-Math.atan(sl) * 0.9 - lean + (me ? ME.spin || 0 : 0) * 0, -h + (me ? ME.spin || 0 : 0), Math.atan(sf) * 0.9 + plane + (me ? ME.hopPitch || 0 : 0));
+    bt.group.rotation.set(-Math.atan(sl) * 0.9 - lean + sink * (0.22 + Math.sin(t * 2.3) * 0.08), -h + (me ? ME.spin || 0 : 0), Math.atan(sf) * 0.9 + plane + (me ? ME.hopPitch || 0 : 0) - sink * 0.16);
     if (bt.group.visible) updateWake(bt.wake, x, z, h, v, S.dt || 0.016); else if (bt.wake) bt.wake.m.visible = false;
   }
   function updatePeers(dt) {
@@ -2187,14 +2245,14 @@
     const pos = await openFish(c.spec, lev, c.zone);
     if (!pos) { S.mode = 'idle'; renderLive(); return; }
     S.active = pos.id; S.mode = 'fight'; S.mt = 0; tutAdvance(2);
-    showFish(pos, c.tx, c.tz); S.fishMeta.leap = 0;
+    showFish(pos, c.tx, c.tz); S.fishMeta.leap = 0; say('bite', true);
     renderLive();
   }
   function showFish(pos, x, z) {
     if (S.fishObj) scene.remove(S.fishObj);
     S.fishObj = makeFish(pos.market, false);
     S.fishObj.position.set(x, -0.9, z);
-    S.fishMeta = { x, z, phase: 0, leap: 9 };
+    S.fishMeta = { x, z, phase: 0, leap: 9, fx: x, fz: z, hd: null, seed: rand(0, 100) }; S.voiceFlags = {};
   }
   function pullIn() {
     const p = activePos(); if (!p || S.mode !== 'fight') return;
@@ -2264,12 +2322,12 @@
     if (res.reason === 'liquidated') {
       if (isActive) { S.mode = 'kraken'; S.mt = 0; }
       S.krakenAt = { x: S.fishObj ? S.fishObj.position.x : ME.x + 6, z: S.fishObj ? S.fishObj.position.z : ME.z, t: 0 };
-      S.shake = 1; SFX.kraken(); buzz([200, 80, 300]); S.lastEv = { k: 'liq', mk: p.market, t: Date.now() };
+      S.shake = 1; SFX.kraken(); say('kraken', true); buzz([200, 80, 300]); S.lastEv = { k: 'liq', mk: p.market, t: Date.now() };
       setTimeout(() => { $('#kr-meta').textContent = `${p.market} ${p.side > 0 ? 'long' : 'short'} ${p.leverage}× · lost ${fmtUSD(p.margin)} margin`; $('#o-kraken').hidden = false; }, isActive ? 2300 : 300);
     } else if (res.reason === 'stop' || res.reason === 'cut') {
       if (res.fraction >= 1) S.streak = 0;
       if (isActive) { S.mode = 'snap'; S.mt = 0; S.snapFrom = S.fishObj ? S.fishObj.position.clone() : null; }
-      snip(m.knife || 'knife1'); S.lastEv = { k: 'cut', mk: p.market, t: Date.now() };
+      say('cut', true); snip(m.knife || 'knife1'); S.lastEv = { k: 'cut', mk: p.market, t: Date.now() };
       if (res.reason === 'stop' && SAVE.charges[m.knife] !== Infinity && SAVE.charges[m.knife] > 0) SAVE.charges[m.knife]--;
       if (pct > -0.2 && pct < 0) quest('cut', 1);
       if (res.fraction < 1) { m.halved = true; m.stop -= 0.15; const live = venue.positions.get(p.id); if (live) armKnife(live, m); }
@@ -2279,6 +2337,7 @@
       const win = res.pnl >= 0;
       if (!p.practice || true) { S.streak = win ? (S.streak || 0) + 1 : 0; if (win && S.streak >= 2) { addXp(10 * S.streak); setTimeout(() => zoneBanner(`${S.streak} WIN STREAK!`, `+${10 * S.streak} bonus XP`, '#3ddc97'), 900); } }
       if (isActive && S.mode !== 'pull') { S.mode = 'pull'; S.mt = 0; S.pullFrom = S.fishObj ? S.fishObj.position.clone() : null; }
+      if (isActive) say(win ? 'win' : 'cut', true);
       if (win) { quest('win', 1); SFX.win(); buzz([20, 40, 20, 40, 60]); } else SFX.escape();
       S.lastEv = { k: win ? 'win' : 'rel', mk: p.market, pnl: +res.pnl.toFixed(2), t: Date.now() };
       const title = res.reason === 'take-profit' ? 'NETTED!' : res.reason === 'pulled' ? 'Pulled in!' : win ? 'Released a winner' : 'Released';
@@ -2401,7 +2460,7 @@
   function releaseCharge() {
     if (!S.charge) return;
     const p = chargeP(), perfect = p > 0.82 && p < 0.94; S.charge = null; $('#charge').hidden = true; $('#drive-hint').style.visibility = '';
-    if (perfect) { quest('perfect', 1); worldFloat('PERFECT CAST!', new THREE.Vector3(ME.x, 3, ME.z), '#ffd23f'); S.perfect = true; buzz(25); SFX.tone(1320, 0.12, 'triangle', 0.2); }
+    if (perfect) { say('perfect'); quest('perfect', 1); worldFloat('PERFECT CAST!', new THREE.Vector3(ME.x, 3, ME.z), '#ffd23f'); S.perfect = true; buzz(25); SFX.tone(1320, 0.12, 'triangle', 0.2); }
     castLine(Math.max(0.15, p));
   }
   function updateCharge(dt) {
@@ -2425,10 +2484,10 @@
     const bt = boat(), fighting = S.mode === 'fight';
     // boost: Shift or the on-screen button; drains a meter that refills
     const wantBoost = (keys.has('shift') || S.boostHeld) && inp.m > 0.2 && !fighting && ME.boost > 0.02;
-    if (wantBoost && !ME.boosting) { SFX.noise(0.35, 0.22, 1800); buzz(15); S.fov = Math.min(S.fov, -1) ; }
+    if (wantBoost && !ME.boosting) { if (Math.random() < 0.35) say('boost'); SFX.noise(0.35, 0.22, 1800); buzz(15); S.fov = Math.min(S.fov, -1) ; }
     ME.boosting = wantBoost;
     ME.boost = clamp(ME.boost + (wantBoost ? -dt * 0.42 : dt * 0.16), 0, 1);
-    const maxV = fighting ? 2.4 : bt.speed * (wantBoost ? 1.65 : 1);
+    const maxV = fighting ? 1.6 : bt.speed * (wantBoost ? 1.65 : 1);   // with a fish on you can only nudge the boat
     // heading turns toward the stick; velocity is a vector so the boat carries momentum and drifts
     let thrust = 0;
     if (inp.m > 0.12) {
@@ -2441,15 +2500,9 @@
     fwd = lerp(fwd, thrust, Math.min(1, dt * (thrust > fwd ? (wantBoost ? 2.6 : 1.5) : 0.9)));
     lat *= Math.max(0, 1 - dt * (bt.id === 'boat_speed' ? 1.6 : 3.2));   // speedboats slide more
     ME.vx = fx * fwd - fz * lat; ME.vz = fz * fwd + fx * lat; ME.v = fwd;
-    // a red fish drags the boat toward it
+    // a hooked fish swims its own course and tows the boat on the line
     const p = activePos();
-    if (p && fighting && S.fishObj) {
-      const f = pnlFrac(p);
-      if (f < 0) {
-        const dx = S.fishObj.position.x - ME.x, dz = S.fishObj.position.z - ME.z, d = Math.hypot(dx, dz) || 1, sev = clamp(-f / 0.6, 0, 1);
-        ME.vx += dx / d * sev * 3.2 * bt.grip * dt; ME.vz += dz / d * sev * 3.2 * bt.grip * dt;
-      }
-    }
+    if (p && fighting && S.fishObj && S.fishMeta) towBoat(p, dt, bt); else S.tension = lerp(S.tension || 0, 0, Math.min(1, dt * 3));
     let nx = ME.x + ME.vx * dt, nz = ME.z + ME.vz * dt;
     // islands: bounce off with a splash
     for (const [n, x, z, s] of ISLANDS) { const R = isRadius[n] * s + 2.2, dx = nx - x, dz = nz - z, d = Math.hypot(dx, dz);
@@ -2467,6 +2520,48 @@
     const ring = document.getElementById('boost-ring'); if (ring) ring.style.strokeDashoffset = String(226 * (1 - ME.boost));
   }
   function nearestZone() { let best = null; for (const z of ZONES) { const d = Math.max(0, Math.hypot(z.x - ME.x, z.z - ME.z) - z.r); if (!best || d < best.d) best = { z, d }; } return best; }
+  // the fish: bigger positions pull harder, red fish run, green fish tire and get reeled in close
+  // water sloshing inside the hull, rising as the fish nears liquidation
+  function updateSink(dt) {
+    const p = activePos(), f = p && S.mode === 'fight' ? pnlFrac(p) : 0;
+    const want = S.mode === 'kraken' ? 1 : S.mode === 'fight' ? clamp((-f - 0.22) / 0.62, 0, 1) : 0;
+    S.sink = lerp(S.sink || 0, want, Math.min(1, dt * (want > (S.sink || 0) ? 0.9 : 1.6)));
+    const me = S.me; if (!me) return;
+    if (!me.bilge) {
+      const box = new THREE.Box3().setFromObject(me.model), sx = (box.max.x - box.min.x) * 0.36, sz = (box.max.z - box.min.z) * 0.36;
+      me.bilge = new THREE.Mesh(new THREE.CircleGeometry(1, 28).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: '#2a8fc4', roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85, emissive: '#0b4f73', emissiveIntensity: 0.4 }));
+      me.bilge.scale.set(sx, 1, sz); me.group.add(me.bilge); me.bilgeY0 = box.min.y + (box.max.y - box.min.y) * 0.18; me.bilgeY1 = box.min.y + (box.max.y - box.min.y) * 0.42;
+    }
+    const k = S.sink; me.bilge.visible = k > 0.03; me.bilge.position.y = lerp(me.bilgeY0, me.bilgeY1, k) + Math.sin(S.time * 4) * 0.03 * k; me.bilge.rotation.z = Math.sin(S.time * 2.3) * 0.08 * k;
+    if (k > 0.25 && Math.random() < dt * k * 14) { const a = rand(0, 6.283); emit(PS.water, 2, () => ({ x: ME.x + Math.cos(a) * 1.4, y: 0.6, z: ME.z + Math.sin(a) * 1.4, vx: -Math.cos(a) * rand(0.5, 1.5), vz: -Math.sin(a) * rand(0.5, 1.5), vy: rand(1, 2.5), grav: 12, life: 0.6, kind: 2, s0: 0.18, s1: 0.08, r: 0.95, g: 0.98, b: 1, a: 0.9 })); }
+    if (k > 0.15 && Math.random() < dt * k * 20) emit(PS.water, 1, () => ({ x: ME.x + rand(-2, 2), y: -0.6, z: ME.z + rand(-2, 2), vy: rand(0.6, 1.2), life: 0.9, kind: 0, s0: 0.12, s1: 0.22, r: 0.85, g: 0.95, b: 1, a: 0.7 }));   // bubbles
+    if (k > 0.5 && Math.random() < dt * 0.6) SFX.noise(0.3, 0.15, 700);
+  }
+  function towBoat(p, dt, bt) {
+    const fm = S.fishMeta, f = pnlFrac(p), red = f < 0, sev = clamp(-f / MAINT, 0, 1);
+    const size = clamp(Math.log10(Math.max(10, p.margin * p.leverage)) - 1, 0.5, 2.4);   // $100 notional = 1, $1,000 = 2
+    if (fm.hd == null) fm.hd = Math.atan2(fm.fz - ME.z, fm.fx - ME.x);
+    if (fm.leap < 0.85) return;
+    // wander, and steer clear of islands and the edge of the map
+    fm.hd += (Math.sin(S.time * 0.55 + fm.seed) * 0.8 + Math.sin(S.time * 1.7 + fm.seed * 2) * 0.45) * dt * (red ? 1.3 : 0.7);
+    for (const [n, x, z, sc] of ISLANDS) { const dx = fm.fx - x, dz = fm.fz - z, d = Math.hypot(dx, dz), R = isRadius[n] * sc + 9; if (d < R) fm.hd += angDiff(Math.atan2(dz, dx), fm.hd) * dt * 2.5; }
+    if (Math.abs(fm.fx) > WORLD - 18 || Math.abs(fm.fz) > WORLD - 18) fm.hd += angDiff(Math.atan2(-fm.fz, -fm.fx), fm.hd) * dt * 2.5;
+    const swim = red ? (1.6 + sev * 7.5) * size : (0.7 + Math.max(0, 0.15 - f) * 3) * size;
+    fm.fx += Math.cos(fm.hd) * swim * dt; fm.fz += Math.sin(fm.hd) * swim * dt;
+    // the line shortens as profit grows (you're reeling it in) and pays out as it runs
+    const len = red ? 8 + sev * 8 : Math.max(3.2, 8.5 - clamp(f, 0, 0.5) * 11);
+    const dx = fm.fx - ME.x, dz = fm.fz - ME.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
+    if (d > len) {
+      const stretch = d - len, k = (red ? 3.2 : 1.4) * size * bt.grip;
+      ME.vx += ux * stretch * k * dt; ME.vz += uz * stretch * k * dt;                       // towed
+      const hold = red ? 0.35 : 0.9;                                                       // the boat holds a tired fish back
+      fm.fx -= ux * stretch * hold * Math.min(1, dt * 3); fm.fz -= uz * stretch * hold * Math.min(1, dt * 3);
+      S.tension = lerp(S.tension || 0, clamp(stretch / 2.5 + (red ? sev : 0), 0, 1), Math.min(1, dt * 4));
+    } else S.tension = lerp(S.tension || 0, 0, Math.min(1, dt * 2));
+    fm.fx = clamp(fm.fx, -WORLD, WORLD); fm.fz = clamp(fm.fz, -WORLD, WORLD);
+    // spray at the bow while being towed fast
+    const sp = Math.hypot(ME.vx, ME.vz); if (sp > 2.5 && Math.random() < dt * sp * 3) { const bx = ME.x + ux * 2, bz = ME.z + uz * 2; emit(PS.water, 3, () => ({ x: bx + rand(-0.5, 0.5), y: 0.3, z: bz + rand(-0.5, 0.5), vx: -uz * rand(-3, 3), vz: ux * rand(-3, 3), vy: rand(1.5, 3.5), grav: 13, life: 0.7, kind: 2, s0: 0.2, s1: 0.08, r: 0.95, g: 0.98, b: 1, a: 0.9, floor: true })); }
+  }
   function zoneBanner(title, sub, color) {
     if (S.showcase) return;
     const b = $('#zone-banner'); b.hidden = true; void b.offsetWidth; b.classList.remove('out'); b.style.setProperty('--zc', color || '#ffd23f');
@@ -2544,11 +2639,9 @@
     const p = activePos(), fo = S.fishObj;
     if (S.mode === 'fight' && p && fo && tip) {
       const f = pnlFrac(p), sev = clamp(-f / 0.6, 0, 1), red = f < 0;
-      const ahead = { x: Math.cos(ME.h), z: Math.sin(ME.h) };
-      const dist = red ? 7 + sev * 9 : Math.max(3.2, 7 - clamp(f, 0, 0.6) * 6);
-      const side = Math.sin(S.time * (red ? 1.6 : 0.6)) * (red ? 3 + sev * 3 : 1.5);
-      const tx = ME.x + ahead.x * dist - ahead.z * side, tz = ME.z + ahead.z * dist + ahead.x * side;
-      fo.position.x = lerp(fo.position.x, tx, Math.min(1, dt * 1.8)); fo.position.z = lerp(fo.position.z, tz, Math.min(1, dt * 1.8));
+      const fmm = S.fishMeta || {};
+      const tx = fmm.fx ?? fo.position.x, tz = fmm.fz ?? fo.position.z;
+      fo.position.x = lerp(fo.position.x, tx, Math.min(1, dt * 6)); fo.position.z = lerp(fo.position.z, tz, Math.min(1, dt * 6));
       fo.position.y = lerp(fo.position.y, red ? -0.3 - sev * 0.25 : -0.12, Math.min(1, dt * 2));
       const fm = S.fishMeta || {};
       if (fm.leap < 0.85) {   // the hooked fish breaches right after the bite
@@ -2569,10 +2662,10 @@
       if (f >= PULL_MIN && Math.random() < S.dt * 3) SFX.tone(1500 + Math.random() * 400, 0.03, 'square', 0.025);                         // reel clicks, ready to pull
       S.halo.visible = true; S.halo.position.set(fo.position.x, 0.17, fo.position.z); S.halo.material.uniforms.uCol.value.set(glowC).multiplyScalar(1.25); S.halo.material.uniforms.uInt.value = 0.7 + (red ? sev * 0.6 : 0); S.halo.scale.setScalar(1 + Math.sin(S.time * 3) * 0.08 + Math.abs(clamp(f, -1, 1)) * 0.4);
       const awayAng = Math.atan2(fo.position.z - ME.z, fo.position.x - ME.x);
-      const face = red ? awayAng : awayAng + Math.PI;  // red: swims away, green: swims toward you
+      const face = red ? (S.fishMeta && S.fishMeta.hd != null ? S.fishMeta.hd : awayAng) : awayAng + Math.PI;  // red: swims its own way, green: turns toward you
       fo.rotation.y = -face + Math.sin(S.time * (red ? 14 : 6)) * (red ? 0.35 : 0.18);
       fo.scale.setScalar(clamp(1.9 + f * 0.8, 1.3, 3)); fo.userData.excite = clamp(Math.abs(f) * 3, 0, 1.5);
-      setLine(S.line, tip, fo.position.clone().setY(Math.max(-0.2, fo.position.y + 0.3)), red ? 0.1 : 0.5, red ? 0.03 + sev * 0.22 : 0);
+      setLine(S.line, tip, fo.position.clone().setY(Math.max(-0.2, fo.position.y + 0.3)), lerp(0.7, 0.02, S.tension || 0), (S.tension || 0) * 0.12 + (red ? sev * 0.15 : 0));
       if (f >= PULL_MIN) S.line.material.color.setRGB(0.6, 2.8, 1.5).multiplyScalar(0.85 + 0.15 * Math.sin(S.time * 6)); else if (red) S.line.material.color.setRGB(2.4 + sev * 1.5, 0.35, 0.4).multiplyScalar(0.75 + 0.25 * Math.sin(S.time * (8 + sev * 10))); else S.line.material.color.setRGB(2.2, 2.0, 1.0);
       if (red && Math.random() < dt * (2 + sev * 8)) foam(fo.position.x + rand(-0.6, 0.6), fo.position.z + rand(-0.6, 0.6), rand(0.5, 1), 0.8, 0.8);
       me.ring.material.color.set(glowC).multiplyScalar(1.3); me.ring.material.opacity = 0.55 + Math.sin(S.time * 5) * 0.15;
@@ -2674,6 +2767,7 @@
       tag('me-warn', 'warn', `<span class="bangs">${'!'.repeat(n)}</span>${words ? `<span class="shout">${words}</span>` : ''}`, head);
     } else if (S.mode === 'fight' && f >= PULL_MIN) tag('me-warn', 'warn good', `<span class="shout good">${f > 0.3 ? 'Big one! Pull!' : 'Pull it in!'}</span>`, head);
     if (S.mode === 'fight' && p && S.fishObj) tag('me-fish', 'fishtag ' + (f >= 0 ? 'up' : 'down'), `${esc(MARKETS[p.market].name)} · ${esc(p.market)} ${p.side > 0 ? 'L' : 'S'} ${p.leverage}× · ${fmtPct(f)}`, S.fishObj.position.clone().setY(0.6));
+    if (S.bubble && (S.bubble.t += S.dt) < 2.8) tag('me-say', 'say', `<span>${esc(S.bubble.text)}</span>`, new THREE.Vector3(ME.x, 7.2, ME.z));
     tag('me-name', 'name me', S.round.crown ? '👑 You' : 'You', new THREE.Vector3(ME.x, 3.6, ME.z));
     if ((S.mode === 'fight' && (f < -0.03 || f >= PULL_MIN)) || S.mode === 'kraken') tagEls.get('me-name').style.display = 'none';
     // sonar labels
@@ -2762,7 +2856,7 @@
     if (has3D && S.ready) {
       waterUniforms.uTime.value = S.time;
       if (!S.hintGone && (S.time > 25 || SAVE.hintSeen)) { S.hintGone = true; SAVE.hintSeen = true; $('#drive-hint').classList.add('gone'); }
-      updateDrive(dt); updateHop(dt); updateCharge(dt); animateFish(S.time); updateWaypoint(dt); updateRings(dt); updateBottles(dt); updateDolphins(dt); updateSchools(dt); musicTick();
+      updateDrive(dt); updateSink(dt); fightVoice(); updateHop(dt); updateCharge(dt); animateFish(S.time); updateWaypoint(dt); updateRings(dt); updateBottles(dt); updateDolphins(dt); updateSchools(dt); musicTick();
       placeBoat(S.me, ME.x, ME.z, ME.h, ME.v, S.time);
       updateFishing(dt); updateShadows(dt); updateBots(dt); updatePeers(dt); updateKraken(dt); updateFx(dt); updateCamera(dt);
       const ps = H * renderer.getPixelRatio() / (2 * Math.tan(camera.fov * Math.PI / 360)); if (PS.glow) { PS.glow.pts.material.uniforms.uScale.value = ps; PS.water.pts.material.uniforms.uScale.value = ps; }
@@ -3007,7 +3101,7 @@
   function equip(slot, id) { if (slot === 'sonar') SAVE.sonar = +id; else SAVE.eq[slot] = id; if (slot === 'boat') swapBoat(); persist(); renderAll(); }
   function swapBoat() {
     if (!S.me) return;
-    const old = S.me; scene.remove(old.group); scene.remove(old.wake.m);
+    const old = S.me; scene.remove(old.group); scene.remove(old.wake.m); S.sink = 0;
     S.me = makeBoat(SAVE.coat || null, null, SAVE.eq.boat);
     placeBoat(S.me, ME.x, ME.z, ME.h, 0, S.time);
     splash3(new THREE.Vector3(ME.x, 0, ME.z), 0.9); sendPresence();
@@ -3149,7 +3243,7 @@
   };
   async function refreshRealBal() { if (!realMode()) return; try { const r = await venue.broker.call('/v1/positions'); S.realBal = r.collateral; S.realAvail = r.available ?? r.collateral; renderHud(); renderLive(); } catch (_) { } }
   function closeSail() {
-    SFX.init(); SFX.ambient();
+    SFX.init(); SFX.ambient(); setTimeout(() => say('sail'), 1600);
     S.showcase = false; phone.classList.remove('showcase'); $('#o-sail').hidden = true; S.swoop = 1.8;
     setTimeout(() => zoneBanner('HookLine Harbor', venue.isLive ? 'live Lighter prices · paper fills' : 'drive to a glowing zone and cast', '#ffd23f'), 900);
     if (S.me && S.me.kind !== SAVE.eq.boat) swapBoat();
@@ -3286,6 +3380,8 @@
   $('#lc-test').addEventListener('click', testRelay);
   $('#lc-real').addEventListener('change', e => { SAVE.real = e.target.checked && !!(venue.broker && venue.broker.ok); if (SAVE.real) toast('Real fills ON: new casts open real Lighter positions within your relay limits.', 'warn'); persist(); renderLighterCard(); renderHud(); });
   $('#sail-nick').addEventListener('input', e => { const v = e.target.value.replace(/[<>]/g, '').trim().slice(0, 16); if (v) { SAVE.nick = v; ME.nick = v; persist(); } });
+  document.addEventListener('click', e => { const x = e.target.closest('[data-xclose]'); if (!x) return; const ov = x.closest('.overlay'); if (ov) ov.hidden = true; else setTab('lake'); });
+  window.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const ov = [...document.querySelectorAll('.overlay')].reverse().find(o => !o.hidden && o.id !== 'o-sail'); if (ov) { ov.hidden = true; return; } if (S.tab !== 'lake') setTab('lake'); });
   $('#real-open').addEventListener('click', openReal);
   $('#real-x').addEventListener('click', () => { $('#o-real').hidden = true; });
   $('#real-login').addEventListener('click', realLogin);
