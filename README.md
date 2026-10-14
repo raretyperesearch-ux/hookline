@@ -65,6 +65,36 @@ To turn on real (testnet) fills, add these variables to the **relay** service in
 Then in the game: Gear → Lighter connection → paste the token → Test relay → Real fills.
 In real mode the relay's markets are priced from the relay's own network (`/v1/prices`), so testnet PnL is honest.
 
+## Accounts and the economy (server/accounts.js, game/economy.js)
+
+Every player has a server account. A guest account is created the first time the game opens (an older
+browser save is carried over in demo mode). Signing in with Privy sends Privy's access token to
+`POST /api/auth/privy`; the server verifies it (ES256, issuer `privy.io`, audience = `PRIVY_APP_ID`,
+keys from Privy's JWKS or `PRIVY_VERIFICATION_KEY`) and turns the guest into a Privy account, or switches
+to that player's existing account on a new device.
+
+AX, gear, the cooler, bait, quest rewards and the Harbor Treasury only change through `POST /api/econ`,
+which runs `game/economy.js`: the same rulebook the browser uses to predict results instantly. The
+server's answer always wins, so editing the browser save does nothing. Every AX movement is appended
+to `ledger.jsonl`.
+
+| Endpoint | What it does |
+|---|---|
+| `POST /api/session` | resume (Bearer token) or create a guest account |
+| `GET /api/me` | your account: economy + profile |
+| `PUT /api/profile` | name, coat, level, tutorial, Fishdex, settings (no money) |
+| `POST /api/econ` | `{action, args}`: buy, equip, sonar, lures, sharpen, knifeUse, catch, sell, sellAll, craft, buyBait, setBait, useBait, claimQuest, levelReward, treasure |
+| `POST /api/auth/privy` | link / switch to the Privy account |
+| `GET /api/economy` | public treasury numbers |
+| `POST /api/admin/treasury` | top the treasury up from fee income: `{add, note}`, header `x-admin-token` |
+
+Service variables (game service): `DATA_DIR=/data` (Railway volume `hookline-data`), `ECONOMY_MODE`
+(`demo` now; `live` = only verified Lighter trades land sellable fish), `TREASURY_AX` (starting pool),
+`ADMIN_TOKEN`, `PRIVY_APP_ID` (+ optional `PRIVY_CLIENT_ID`, `PRIVY_VERIFICATION_KEY`).
+
+Before `ECONOMY_MODE=live`: verify real catches against the player's Lighter trade history on the
+server (the `verified` flag on `catch`), so only real trades mint sellable fish.
+
 ## Play for real (Privy + Lighter, in the browser)
 
 - `game/hookline-real.js` is the real adapter: Privy sign-in (`game/hookline-auth/`, built from `auth/`), Lighter's official WASM signer in a Web Worker (`game/lighter/`), and the device's Lighter API key kept encrypted in IndexedDB. Trades go from the player's browser straight to Lighter; HookLine never holds keys or funds.
