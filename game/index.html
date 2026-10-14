@@ -567,6 +567,7 @@
   .real-links { font-size: 12.5px; font-weight: 800; } .real-links a { color: var(--mist); }
   #h-wallet.realchip { border-color: rgba(61,220,151,.8); cursor: pointer; pointer-events: auto; } #h-wallet.realchip::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 6px #3ddc97; margin-right: 5px; }
   .tag.say { animation: none; z-index: 3; }
+  .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
   .xclose { position: sticky; top: 0; justify-self: end; z-index: 3; width: 38px; height: 38px; border-radius: 50%; border: 2px solid var(--line); background: rgba(6,26,51,.9); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
@@ -672,6 +673,7 @@
       <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
       <h2>Gear</h2>
       <p class="sub">Everything here is bought with AX. Gear changes how you fish, not the market.</p>
+      <label class="lc-toggle voice-toggle"><input type="checkbox" id="voice-on" checked> 🎙️ Fisherman voice</label>
       <div class="lighter-card" id="lighter-card">
         <div class="lc-head"><b>Lighter connection</b><span class="venue-badge" id="lc-badge"><i></i><span>Paper</span></span></div>
         <p>Prices are always live from Lighter when your network allows it. To make real fills, run the HookLine relay (holds your API key, enforces limits) and paste its URL and token here. Start on testnet.</p>
@@ -3427,6 +3429,7 @@
   $('#kr-close').addEventListener('click', () => { $('#o-kraken').hidden = true; });
   $('#help').addEventListener('click', () => { $('#o-howto').hidden = false; });
   $('#ht-close').addEventListener('click', () => { $('#o-howto').hidden = true; });
+  $('#voice-on').checked = !SAVE.voiceOff; $('#voice-on').addEventListener('change', e => { SAVE.voiceOff = !e.target.checked; persist(); if (!SAVE.voiceOff) say('sail', true); });
   $('#sound').addEventListener('click', e => { SFX.on = !SFX.on; if (SFX.on) SFX.init(); e.currentTarget.setAttribute('aria-pressed', String(SFX.on)); e.currentTarget.setAttribute('aria-label', SFX.on ? 'Sound on' : 'Sound off'); $('#snd-wave').style.display = SFX.on ? '' : 'none'; });
   $('#tip-next').addEventListener('click', () => { tipIdx++; if (tipIdx >= TIPS.length) { SAVE.tips = true; persist(); } showTip(); });
   $$('.tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
