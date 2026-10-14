@@ -333,6 +333,7 @@
   .sail .top img { width: min(62%, 250px); filter: drop-shadow(0 6px 14px rgba(0,0,0,.45)); animation: pop .6s both; }
   .sail .pitch { font-family: var(--display); font-size: 17px; letter-spacing: .3px; text-align: center; line-height: 1.2; text-shadow: 0 2px 0 var(--ink); animation: pop .5s .2s both; }
   .sail .pitch .g { color: #3ddc97; font-weight: 400; } .sail .pitch .r { color: #ff5c7a; font-weight: 400; }
+  .sail .nick { pointer-events: auto; margin-top: 4px; font: 700 14px var(--body, inherit); text-align: center; padding: 6px 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,.35); background: rgba(6,26,51,.75); color: #fff; width: 200px; }
   .sail .top small { font-weight: 800; color: var(--mist); letter-spacing: .4px; }
   .sail .card { display: grid; gap: 10px; width: 100%; max-width: 380px; justify-self: center; }
   .sail .pick { display: grid; grid-template-columns: 44px minmax(0,1fr) 44px; align-items: center; gap: 6px; }
@@ -642,7 +643,7 @@
     </section>
 
     <div class="sail" id="o-sail" hidden>
-      <div class="top"><img src="art/logo.webp" alt="HookLine"><span class="pitch">Every fish is a real Lighter trade.<br><b class="g">Green?</b> Pull it in. <b class="r">Red?</b> Cut the line.</span><small id="sail-who">Pick your boat</small><span class="venue-badge" id="venue-badge"><i></i><span>Simulated prices</span></span></div>
+      <div class="top"><img src="art/logo.webp" alt="HookLine"><span class="pitch">Every fish is a real Lighter trade.<br><b class="g">Green?</b> Pull it in. <b class="r">Red?</b> Cut the line.</span><small id="sail-who">Pick your boat</small><input id="sail-nick" class="nick" maxlength="16" placeholder="Your captain name" autocomplete="off" hidden><span class="venue-badge" id="venue-badge"><i></i><span>Simulated prices</span></span></div>
       <div></div>
       <div class="card">
         <div class="pick"><button class="arrow" id="sail-prev" type="button" aria-label="Previous boat">‹</button>
@@ -1757,13 +1758,31 @@
     if (!room) return;
     const p = activePos(), f = p ? pnlFrac(p) : 0;
     const fishP = S.fishObj ? S.fishObj.position : null;
-    room.presence({ rid: S.round.id, rs: +S.round.score.toFixed(4), cr: S.round.crown ? 1 : 0, em: ME.em || null, zn: S.zone ? S.zone.id : null, b: SAVE.eq.boat, x: +ME.x.toFixed(2), z: +ME.z.toFixed(2), h: +ME.h.toFixed(3), v: +ME.v.toFixed(2), c: ME.color, n: ME.nick, st: S.mode, mk: p ? p.market : null, sd: p ? p.side : 0, lv: p ? p.leverage : 0, pnl: +f.toFixed(4), fx: fishP ? +fishP.x.toFixed(1) : null, fz: fishP ? +fishP.z.toFixed(1) : null, ses: +S.session.toFixed(2), ev: S.lastEv || null }).catch(() => { });
+    room.presence({ rid: S.round.id, rs: +S.round.score.toFixed(4), cr: S.round.crown ? 1 : 0, em: ME.em || null, zn: S.zone ? S.zone.id : null, b: SAVE.eq.boat, x: +ME.x.toFixed(2), z: +ME.z.toFixed(2), h: +ME.h.toFixed(3), v: +ME.v.toFixed(2), c: SAVE.coat || ME.color, n: ME.nick, st: S.mode, mk: p ? p.market : null, sd: p ? p.side : 0, lv: p ? p.leverage : 0, pnl: +f.toFixed(4), fx: fishP ? +fishP.x.toFixed(1) : null, fz: fishP ? +fishP.z.toFixed(1) : null, ses: +S.session.toFixed(2), ev: S.lastEv || null }).catch(() => { });
+  }
+  // standalone multiplayer: the HookLine server (hookline/server) speaks the same presence shape as claude.ai rooms
+  const MP_URL = new URLSearchParams(location.search).get('mp') || window.HOOKLINE_MP || '';
+  function wsRoom(url) {
+    return new Promise(res => {
+      let ws, me = null, peersCb = null, closeCb = null, opened = false;
+      try { ws = new WebSocket(url + (url.includes('?') ? '&' : '?') + 'room=lobby'); } catch (_) { res(null); return; }
+      const to = setTimeout(() => { if (!opened) res(null); }, 6000);
+      const api = { presence: p => { if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'presence', p })); return Promise.resolve(); }, onPeers: (cb, onClose) => { peersCb = cb; closeCb = onClose; }, standalone: true };
+      ws.onopen = () => { opened = true; clearTimeout(to); res(api); };
+      ws.onerror = () => { if (!opened) { clearTimeout(to); res(null); } };
+      ws.onclose = () => { if (closeCb) closeCb(); };
+      ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (_) { return; } if (m.t === 'hello') me = m.id;
+        if (m.t === 'peers' && peersCb && Array.isArray(m.peers)) peersCb({ peers: m.peers.map(p => ({ peer: String(p.peer), presence: p.presence, kind: 'viewer', sameTab: p.peer === me, isMe: false, by: null })) }); };
+    });
   }
   async function connectRoom() {
-    if (!window.claude || !window.claude.use) return;
-    try { userCap = await window.claude.use('user'); } catch (_) { userCap = null; }
-    if (userCap) { try { const me = await userCap.me(); if (me.color) ME.color = me.color; if (me.name) ME.nick = me.name.split(' ')[0]; } catch (_) { } }
-    try { room = await window.claude.use('room'); } catch (_) { room = null; }
+    if (window.claude && window.claude.use) {
+      try { userCap = await window.claude.use('user'); } catch (_) { userCap = null; }
+      if (userCap) { try { const me = await userCap.me(); if (me.color) ME.color = me.color; if (me.name) ME.nick = me.name.split(' ')[0]; } catch (_) { } }
+      try { room = await window.claude.use('room'); } catch (_) { room = null; }
+    }
+    if (!userCap && SAVE.nick) ME.nick = SAVE.nick;
+    if (!room && MP_URL) room = await wsRoom(MP_URL);
     if (!room) return;
     room.onPeers(ch => { syncPeers(ch.peers); }, () => { room = null; });
     setInterval(sendPresence, 120);
@@ -2690,7 +2709,9 @@
   }
   /* ---------- set sail: the camera orbits your boat while you pick ---------- */
   let sailIdx = 0;
+  const SILLY = ['Captain', 'Admiral', 'Skipper', 'Salty', 'Sir', 'Lady', 'Lil', 'Big'], SILLY2 = ['Bobber', 'Barnacle', 'Guppy', 'Wahoo', 'Kelp', 'Minnow', 'Squid', 'Pickle', 'Noodle', 'Biscuit'];
   function openSail() {
+    if (!userCap) { if (!SAVE.nick) { SAVE.nick = `${pick(SILLY)} ${pick(SILLY2)}`; persist(); } ME.nick = SAVE.nick; const ni = $('#sail-nick'); ni.hidden = false; ni.value = SAVE.nick; }
     sailIdx = Math.max(0, BOATS.findIndex(b => b.id === SAVE.eq.boat));
     S.showcase = true; phone.classList.add('showcase'); $('#o-sail').hidden = false;
     $('#sail-who').textContent = `${ME.nick && ME.nick !== 'You' ? `Fishing as ${ME.nick} · ` : ''}${peers.size ? `${peers.size + 1} anglers on the water` : 'Pick your boat'}`;
@@ -2846,6 +2867,7 @@
   { const c = lcLoad(); if (c.url) { $('#lc-url').value = c.url; $('#lc-token').value = c.token || ''; setTimeout(testRelay, 1500); } }
   $('#lc-test').addEventListener('click', testRelay);
   $('#lc-real').addEventListener('change', e => { SAVE.real = e.target.checked && !!(venue.broker && venue.broker.ok); if (SAVE.real) toast('Real fills ON: new casts open real Lighter positions within your relay limits.', 'warn'); persist(); renderLighterCard(); renderHud(); });
+  $('#sail-nick').addEventListener('input', e => { const v = e.target.value.replace(/[<>]/g, '').trim().slice(0, 16); if (v) { SAVE.nick = v; ME.nick = v; persist(); } });
   $('#sail-prev').addEventListener('click', () => { sailIdx = (sailIdx + BOATS.length - 1) % BOATS.length; SFX.tone(660, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
@@ -2891,7 +2913,7 @@
     $('#loading').hidden = true;
     renderAll(); renderPlayers();
     openSail();
-    connectRoom();
+    connectRoom().then(() => { if (userCap) $('#sail-nick').hidden = true; if (S.showcase) renderSail(); renderPlayers(); });
     requestAnimationFrame(frame);
   })();
 })();

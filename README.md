@@ -14,6 +14,7 @@ A multiplayer fishing game where every fish is a leveraged perp position on [Lig
 | `game/models/*.json` | glTF models (embedded buffers) built in Blender. |
 | `game/art/*.webp` | 2D art (logo, gear, fish icons, boat renders). |
 | `blender/` | Headless Blender (`pip install bpy`) scripts that build the models and icon renders. |
+| `server/` | Node multiplayer server (presence relay, rooms of 40). Run anywhere: `cd server && npm i && npm start`. |
 | `relay/` | FastAPI relay that holds the Lighter API key and signs orders with the official `lighter-python` SignerClient. |
 | `tools/roster.py` | Pulls Lighter's market list and assigns every ticker a fish species, zone and name. |
 
@@ -36,3 +37,18 @@ curl localhost:8080/v1/health
 ```
 
 Endpoints: `GET /v1/health`, `GET /v1/markets`, `GET /v1/positions`, `POST /v1/open`, `POST /v1/stop`, `POST /v1/tp`, `POST /v1/close` (all but health/markets need `Authorization: Bearer $HOOKLINE_RELAY_TOKEN`).
+
+## Multiplayer
+
+- **Inside claude.ai** the game uses the page's built-in room: everyone the artifact is shared with sails together.
+- **Hosted on your own site**: deploy `server/` (any Node host: Railway, Fly, Render), then point the game at it with `?mp=wss://your-server` or by setting `window.HOOKLINE_MP = 'wss://your-server'` in `game/index.html`. With no server it falls back to bots.
+
+Everyone shares the same 5-minute rounds and Frenzy zone (both are derived from the clock), the round leaderboard comes from each player's presence, and emotes ride along with it.
+
+## Game loop
+
+1. Pick a boat, set sail. A guided first catch walks new players through drive → cast → pull/cut → Fishdex.
+2. Drive to a zone, hold to cast (release in the bright band for a PERFECT cast), fight the fish: green past +2% pull it in, red cut it before the Kraken.
+3. Every catch fills the Fishdex (213 species), scores the current round and progresses daily quests.
+4. Quests pay AX; AX buys rods, knives, nets, sonar, chests and boats.
+5. Every 5 minutes: podium, XP, crown for the winner. Mid-round, one zone goes into Frenzy.
