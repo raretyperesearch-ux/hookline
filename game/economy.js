@@ -54,6 +54,9 @@
       { id: 'grub', name: 'Golden Grub', icon: '🐛', desc: 'Double XP, and the fish sells for double.', recipe: { fish: 3 }, price: 160 },
     ];
   const LURE_PRICE = 300, SHARPEN_PRICE = 25;
+  // player market: anglers sell bait to each other; the Harbor keeps a cut, which tops up the Treasury
+  const MARKET = { fee: 0.05, maxListings: 10, maxQty: 20, minPrice: 5, maxPrice: 5000, ttl: 72 * 3600e3 };
+  const sellerGets = (price, qty = 1) => Math.floor(price * qty * (1 - MARKET.fee));
   const DAILY_BUYBACK = 600, COOLER_MAX = 40, LEVEL_AX = 50, TREASURE_AX = 25, TREASURE_PER_DAY = 5, CATCHES_PER_DAY = 400;
   const TIERS = [{ n: 'Common', m: 1, c: '#9ad8ee' }, { n: 'Uncommon', m: 1.5, c: '#3ddc97' }, { n: 'Rare', m: 2.2, c: '#5fb4ff' }, { n: 'Legendary', m: 3.5, c: '#ffd23f' }];
   // rarity from trading volume: the big tickers are common fish, thin ones are rare
@@ -173,6 +176,6 @@
   }
 
   const API = { RODS, KNIVES, NETS, SONARS, CHESTS, BOATS, BAITS, LURE_PRICE, SHARPEN_PRICE, DAILY_BUYBACK, COOLER_MAX, TIERS, RARITY, QUEST_POOL,
-    fishValue, questsForDay, dayNum, dayStr, KEYS, fresh, normalize, pick, apply, buybackLeft, canCraft };
+    MARKET, sellerGets, fishValue, questsForDay, dayNum, dayStr, KEYS, fresh, normalize, pick, apply, buybackLeft, canCraft };
   if (typeof module !== 'undefined' && module.exports) module.exports = API; else root.HL_ECON = API;
 })(typeof self !== 'undefined' ? self : this);

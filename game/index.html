@@ -618,6 +618,44 @@
   .mk-how span { display: grid; justify-items: center; text-align: center; font-size: 22px; flex: 1; } .mk-how small { font-size: 10.5px; color: #b9d6ee; line-height: 1.2; margin-top: 2px; }
   .mk-how i { font-style: normal; color: #5fb4ff; font-weight: 800; }
   details.adv { margin: 0 0 12px; } details.adv > summary { cursor: pointer; color: #b9d6ee; font-size: 12.5px; font-weight: 700; padding: 6px 2px; } details.adv[open] > summary { margin-bottom: 8px; }
+  .pm-live { color: #3ddc97; font-size: 11.5px; font-weight: 800; }
+  .mk-item .who { color: #9ad8ee; } .deal { font-size: 10.5px; font-weight: 800; color: #062; background: #3ddc97; border-radius: 6px; padding: 1px 6px; margin-left: 4px; }
+  .pm-sell { display: grid; gap: 8px; background: #0e3559; border: 2px solid #1d5585; border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
+  .pm-sell .row { display: grid; grid-template-columns: 1.4fr .7fr 1fr; gap: 8px; }
+  .pm-sell label { display: grid; gap: 3px; font-size: 11.5px; color: #b9d6ee; font-weight: 700; }
+  .pm-sell select, .pm-sell input { font: inherit; font-size: 15px; padding: 7px 8px; border-radius: 10px; border: 2px solid #1d5585; background: #06213b; color: #fff; min-width: 0; }
+  .pm-sell .calc { font-size: 12.5px; color: #cfe6f7; } .pm-sell .calc b { color: #ffd23f; }
+  /* ---- compact play layout: the water and your boat come first ---- */
+  .kitbar { display: flex; align-items: center; gap: 8px; width: 100%; background: rgba(255,255,255,.06); border: 1.5px solid var(--line); border-radius: 12px; padding: 5px 10px; color: var(--foam); cursor: pointer; font: 800 12.5px var(--body, inherit); text-align: left; }
+  .kitbar img { width: 26px; height: 22px; object-fit: contain; } .kitbar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .kitbar i { font-style: normal; color: var(--sunny); transition: transform .2s; }
+  .kitbar[aria-expanded="true"] i { transform: rotate(180deg); }
+  .kit { display: grid; gap: 8px; animation: kitin .18s ease-out; } @keyframes kitin { from { opacity: 0; transform: translateY(8px); } }
+  .kit[hidden] { display: none; }
+  #main.nolines .slots-head, #main.nolines #slots { display: none; }
+  #main .hint { margin: 0; font-size: 11px; line-height: 1.3; }
+  #fight.solo .fight-foot #fslots { visibility: hidden; }
+  .roundbox.mini ol, .roundbox.mini .fz { display: none; } .roundbox.mini { width: auto; padding: 4px 9px; }
+  .roundbox.mini .rh small { margin-left: 8px; }
+  #fight.solo .fight-foot { position: absolute; right: 10px; top: -52px; } #fight.solo .fight-foot .castmore { box-shadow: 0 4px 0 rgba(0,0,0,.35); }
+  #phone.fighting .boost { display: none; }
+  .roundbox .me-rank { display: none; font-family: var(--mono); font-size: 11.5px; color: var(--sunny); margin-left: 6px; } .roundbox.mini .me-rank { display: inline; }
+  @media (max-width: 480px) {
+    .hud { padding: 8px 10px 0; gap: 5px; } .logo-img { height: 34px !important; width: auto; }
+    #tape { display: none; }
+    #minimap { width: 64px; height: 64px; left: 8px; }
+    .roundbox { right: 8px; }
+    .emotes { right: 8px; } .emotes > button { width: 36px; height: 36px; font-size: 18px; }
+    .obj { top: 88px; font-size: 11.5px; padding: 4px 10px; }
+    #minimap, .roundbox { top: 122px; } .emotes { top: 196px; }
+    .sheet { padding: 8px 10px 10px; } .sheet > div { gap: 7px; }
+    .big-btn { font-size: 18px; padding: 8px 0; }
+    .joy { width: 92px; height: 92px; left: 10px; } .joy i { width: 40px; height: 40px; }
+    .boost { width: 62px; height: 62px; right: 10px; font-size: 11px; }
+    .fight-top { grid-template-columns: 48px minmax(0, 1fr) auto; } .fight-top img { width: 48px; height: 34px; }
+    .fbar-legend { font-size: 9.5px; }
+    .tabbar { height: 56px; } .tab img { width: 26px !important; height: 26px !important; } .tab { font-size: 10.5px; }
+    .sheet { bottom: 56px; }
+  }
   .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
@@ -638,7 +676,7 @@
     <div id="edges"></div>
     <div id="newfish-slot"></div>
     <div class="obj" id="obj" hidden><span class="st" id="obj-st">1/4</span><span id="obj-t"></span></div>
-    <div class="roundbox" id="roundbox" role="button" aria-label="Round leaderboard"><div class="rh"><span>ROUND</span><small id="rb-time">5:00</small></div><ol id="rb-list"></ol><div class="fz" id="rb-fz" hidden></div></div>
+    <div class="roundbox" id="roundbox" role="button" aria-label="Round leaderboard"><div class="rh"><span>🏆 ROUND<b class="me-rank" id="rb-me"></b></span><small id="rb-time">5:00</small></div><ol id="rb-list"></ol><div class="fz" id="rb-fz" hidden></div></div>
     <div class="drive-hint" id="drive-hint"><kbd>WASD</kbd> drive · <kbd>Shift</kbd> boost · <kbd>Space</kbd> cast (stopped) / hop (moving) · <kbd>C</kbd> cut · <kbd>1-6</kbd> emote</div>
     <div class="loading" id="loading"><img src="art/logo.webp" alt=""><div class="lbar"><i id="load-i"></i></div><span>Loading the lake…</span></div>
 
@@ -672,6 +710,10 @@
 
     <div class="sheet" id="sheet">
       <div id="main">
+        <div class="slots-head"><b id="chest-title">Bucket · 0/2</b><span id="chest-pnl">PnL $0.00</span></div>
+        <div class="slots mini" id="slots"></div>
+        <button class="kitbar" id="kitbar" type="button" aria-expanded="false" aria-controls="kit"><img id="kb-rod" src="art/rod1.webp" alt=""><span id="kb-sum">2× rod · $25 bait</span><i aria-hidden="true">▴</i></button>
+        <div class="kit" id="kit" hidden>
         <div class="loadout">
           <button class="gearchip" type="button" data-goto="rod"><img id="lo-rod" src="art/rod2.webp" alt=""><b id="lo-rod-t">5×</b><small>Rod</small></button>
           <button class="gearchip" type="button" data-goto="knife"><img id="lo-knife" src="art/knife1.webp" alt=""><b id="lo-knife-t">−25%</b><small>Knife</small><span class="badge" id="lo-knife-c">3</span></button>
@@ -684,8 +726,7 @@
           <button class="optbtn" type="button" data-bait="100" aria-pressed="false">$100</button>
           <select class="lure" id="lure" aria-label="Lure"><option value="">Any fish</option></select>
         </div>
-        <div class="slots-head"><b id="chest-title">Bucket · 0/2</b><span id="chest-pnl">PnL $0.00</span></div>
-        <div class="slots mini" id="slots"></div>
+        </div>
         <button class="big-btn cast" id="cast" type="button">CAST</button>
         <p class="hint" id="cast-note">Drive into a fishing zone to cast.</p>
       </div>
@@ -759,8 +800,12 @@
       <h3>Bait Shack</h3>
       <p class="sub">Craft bait from your catch, or buy it from Old Pete. Bait goes on your next cast.</p>
       <div id="mk-baits" class="mk-list"></div>
-      <h3>Player market</h3>
-      <div class="mk-soon">🛶 <b>Trade bait with other anglers</b><span>List the bait you craft and set your own AX price. Opens once accounts sync to the server.</span></div>
+      <div class="mk-h"><h3>Player market</h3><small class="pm-live" id="pm-live"></small></div>
+      <p class="sub">Buy bait from other anglers, or sell yours at your own price. The Harbor keeps 5%, and that goes back into the Treasury.</p>
+      <div id="pm-buy" class="mk-list"></div>
+      <h3>Sell your bait</h3>
+      <div id="pm-sell" class="pm-sell"></div>
+      <div id="pm-mine" class="mk-list"></div>
     </section>
     <section class="screen" id="s-quests" hidden aria-label="Quests">
       <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
@@ -1950,6 +1995,7 @@
   function renderRound() {
     const r = roundNow(), rows = roundRows(), meI = rows.findIndex(x => x.me);
     $('#rb-time').textContent = mmss(r.left);
+    $('#rb-me').textContent = `#${meI + 1}`; { const rb = $('#roundbox'); if (W < 481) { if (!rb._t) rb.classList.add('mini'); } else rb.classList.remove('mini'); }
     const show = rows.slice(0, 3); if (meI > 2) show.push(rows[meI]);
     $('#rb-list').innerHTML = show.map(x => `<li class="${x.me ? 'me' : ''}"><span>${rows.indexOf(x) + 1}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</span><b class="${x.sc >= 0 ? 'up' : 'down'}">${fmtPct(x.sc)}</b></li>`).join('');
     const fz = frenzyNow(), fe = $('#rb-fz');
@@ -2958,9 +3004,9 @@
     if (S.watch) { S.watch.t -= dt; const wp = S.watch.getPos(); if (!wp || S.watch.t <= 0) S.watch = null; else { look = new THREE.Vector3(wp.x, 0, wp.z - 1); S.swoop = 0.3; } }
     let extra = clamp(Math.abs(ME.v) - 5, 0, 12) * 0.35;
     if (!S.watch && S.fishObj && S.mode === 'fight') { const fp = S.fishObj.position; look.x = lerp(look.x, fp.x, 0.35); look.z = lerp(look.z, fp.z, 0.35); extra += clamp(Math.hypot(fp.x - ME.x, fp.z - ME.z) - 7, 0, 10) * 0.45; }
-    const zoom = clamp(0.7 / Math.max(0.3, camera.aspect), 1, 1.35);
+    const zoom = clamp(0.56 / Math.max(0.3, camera.aspect), 0.92, 1.12);   // tall phones used to zoom out to 1.35×: the boat got lost
     S.fightCam = lerp(S.fightCam || 0, !S.watch && (S.mode === 'fight' || S.mode === 'pull' || S.mode === 'kraken') ? 1 : 0, Math.min(1, dt * 1.6));
-    const fc = reduceMotion ? 0 : S.fightCam, hgt = lerp(19, 10.5, fc), back = lerp(14, 15.5, fc);
+    const tall = camera.aspect < 0.8, fc = reduceMotion ? 0 : S.fightCam, hgt = lerp(tall ? 13 : 19, 10.5, fc), back = lerp(tall ? 12.5 : 14, 15.5, fc);   // phones: sit lower so the boat reads
     { const sh = (S.sheetH || 300) / Math.max(1, H); look.z += clamp(sh - 0.3, 0, 0.4) * 20 * zoom; }   // keep the boat above the bottom panel
     const want = new THREE.Vector3(look.x, (hgt + extra) * zoom, look.z + (back + extra * 0.7) * zoom);
     look.y = fc * 1.2;
@@ -3189,6 +3235,8 @@
     $('#lo-net').style.opacity = n.tp ? 1 : 0.35; $('#lo-net-t').textContent = n.tp ? (n.tp === 'adjust' ? fmtPct(SAVE.tp) : fmtPct(n.tp)).replace('.0', '') : 'None';
     $('#lo-sonar-t').textContent = SAVE.sonar ? 'Lv ' + SAVE.sonar : 'Off';
     $$('[data-bait]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.bait === SAVE.bait)));
+    $('#kb-rod').src = `art/${r.id}.webp`; const ob = SAVE.baitEq && SAVE.baits[SAVE.baitEq] > 0 ? BAITS.find(b => b.id === SAVE.baitEq) : null;
+    $('#kb-sum').textContent = `${r.name} ${r.lev}× · $${SAVE.bait} bait · knife ${$('#lo-knife-t').textContent}${ob ? ' · ' + ob.icon : ''}`;
     const sel = $('#lure'); sel.disabled = !SAVE.lures;
     sel.innerHTML = `<option value="">${SAVE.lures ? 'Any fish' : 'No lures'}</option>` + (SAVE.lures ? S.lake.mk.map(m => `<option value="${m}">${m} lure</option>`).join('') : '');
     sel.value = S.lake.mk.includes(S.lure) ? S.lure : '';
@@ -3210,6 +3258,7 @@
     $('#slots').style.gridTemplateColumns = `repeat(${a.cols}, minmax(0, 1fr))`; $('#slots').innerHTML = a.html;
     $('#fslots').style.gridTemplateColumns = `repeat(${b.cols}, minmax(0, 1fr))`; $('#fslots').innerHTML = b.html;
     const tot = ps.reduce((acc, p) => acc + pnlUsd(p), 0);
+    $('#main').classList.toggle('nolines', ps.length === 0); $('#fight').classList.toggle('solo', ps.length <= 1); phone.classList.toggle('fighting', !!S.active && ['fight', 'pull', 'snap', 'kraken'].includes(S.mode));
     $('#chest-title').textContent = `${chest().name} · ${ps.length}/${cap} lines${cap > 5 ? ' (first 5 shown)' : ''}`;
     const cp = $('#chest-pnl'); cp.textContent = `PnL ${fmtSigned(tot)}`; cp.className = tot >= 0 ? 'up' : 'down';
     const dot = $('#chest-dot'); dot.hidden = ps.length === 0; dot.textContent = ps.length;
@@ -3588,8 +3637,68 @@
     const t0 = performance.now(), step = now => { const k = Math.min(1, (now - t0) / 600); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3))).toLocaleString('en-US'); if (k < 1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
   }
+  /* ---------- player market (server/accounts.js holds the listings and the escrowed bait) ---------- */
+  const PM = { data: null, busy: false, at: 0, sellBait: null, seq: 0, applied: 0 };
+  async function fetchMarket() {
+    if (!ACC.online || !ACC.token || PM.busy) return; PM.busy = true;
+    const my = ++PM.seq; try { const r = await api('/api/market'); if (r.ok) takeMarket(r, my); } catch (_) { } PM.busy = false;
+  }
+  function takeMarket(r, my) {
+    const fresh = my >= PM.applied;   // a refresh that started before a buy/list/cancel must not undo it (its inbox still counts)
+    if (fresh) { PM.applied = my; PM.data = r; PM.at = Date.now(); if (r.treasury) ACC.treasury = r.treasury; if (r.econ && ACC.pending === 0) applyEcon(r.econ); }
+    for (const m of r.inbox || []) { const b = BAITS.find(x => x.id === m.bait) || { icon: '🪝', name: m.bait };
+      if (m.k === 'sold') { toast(`💰 ${m.buyer} bought ${m.qty}× ${b.name} from you: +${m.ax} AX`, 'good'); SFX.coin(); }
+      else if (m.k === 'expired') toast(`Your ${b.name} listing ended unsold. ${m.qty} back in your bag.`); }
+    if ((r.inbox || []).length) { renderAll(); $('#mk-dot').hidden = S.tab === 'market'; }
+    if (S.tab === 'market') renderMarket();
+  }
+  async function marketOp(op, body) {
+    if (!ACC.online) { toast('The player market needs a connection.', 'warn'); return; }
+    const my = ++PM.seq; const r = await api('/api/market/' + op, body); if (r.error) toast(r.error[0].toUpperCase() + r.error.slice(1) + '.', 'warn');
+    takeMarket(r, my); return r;
+  }
+  function renderPlayerMarket() {
+    const d = PM.data, buy = $('#pm-buy'), sell = $('#pm-sell'), mine = $('#pm-mine'); if (!buy) return;
+    $('#pm-live').textContent = d ? `● ${d.listings.length + d.mine.length} listings live` : '';
+    if (!ACC.online) { buy.innerHTML = `<div class="mk-empty"><b>Offline</b><span>The player market needs a connection to the HookLine server.</span></div>`; sell.hidden = true; mine.innerHTML = ''; return; }
+    if (!d) { buy.innerHTML = `<div class="mk-empty"><span>Loading the market…</span></div>`; return; }
+    const pete = id => BAITS.find(b => b.id === id).price;
+    buy.innerHTML = d.listings.length ? d.listings.slice(0, 12).map(l => { const b = BAITS.find(x => x.id === l.bait); if (!b) return '';
+      return `<div class="mk-item"><span class="bi">${b.icon}</span><div><div class="nm">${b.name}${l.price < pete(b.id) ? '<span class="deal">DEAL</span>' : ''}</div><div class="meta"><span class="who">by ${esc(l.nick)}</span> · ${l.qty} left · Old Pete sells for ${pete(b.id)}</div></div>
+        <div class="acts"><button class="optbtn" type="button" data-pmbuy="${l.id}" ${SAVE.ax < l.price ? 'disabled' : ''}>Buy ${img('coin')} ${l.price}</button></div></div>`; }).join('')
+      : `<div class="mk-empty"><b>No bait for sale right now.</b><span>Be the first: craft some at the Bait Shack and list it below.</span></div>`;
+    const owned = BAITS.filter(b => (SAVE.baits[b.id] || 0) > 0); sell.hidden = false;
+    if (!owned.length) sell.innerHTML = `<div class="calc">Craft or buy bait first, then list it here for other anglers.</div>`;
+    else {
+      if (!PM.sellBait || !owned.some(b => b.id === PM.sellBait)) PM.sellBait = owned[0].id;
+      const keep = $('#pm-bait') && $('#pm-bait').value === PM.sellBait ? { q: $('#pm-qty').value, p: $('#pm-price').value, f: document.activeElement && document.activeElement.id } : null;
+      const st = d.stats[PM.sellBait] || {}, sug = st.avg || Math.round(pete(PM.sellBait) * 0.85);
+      sell.innerHTML = `<div class="row"><label>Bait<select id="pm-bait">${owned.map(b => `<option value="${b.id}" ${b.id === PM.sellBait ? 'selected' : ''}>${b.icon} ${b.name} (${SAVE.baits[b.id]})</option>`).join('')}</select></label>
+        <label>How many<input id="pm-qty" type="number" min="1" max="${Math.min(SAVE.baits[PM.sellBait], HL_ECON.MARKET.maxQty)}" value="1"></label>
+        <label>Price each (AX)<input id="pm-price" type="number" min="${HL_ECON.MARKET.minPrice}" max="${HL_ECON.MARKET.maxPrice}" value="${sug}"></label></div>
+        <div class="calc" id="pm-calc"></div><div class="calc">${st.avg ? `Recent sales average <b>${st.avg} AX</b>` : 'No recent sales yet'}${st.best ? ` · cheapest listed <b>${st.best} AX</b>` : ''} · Old Pete charges <b>${pete(PM.sellBait)} AX</b></div>
+        <button class="big-btn reel" type="button" id="pm-list">LIST IT</button>`;
+      if (keep) { $('#pm-qty').value = keep.q; $('#pm-price').value = keep.p; if (keep.f && $('#' + keep.f)) $('#' + keep.f).focus(); }
+      calcSell();
+    }
+    mine.innerHTML = d.mine.length ? `<div class="meta" style="font-size:12px;color:#b9d6ee">Your listings</div>` + d.mine.map(l => { const b = BAITS.find(x => x.id === l.bait); const h = Math.max(0, Math.round((l.ends - Date.now()) / 36e5));
+      return `<div class="mk-item on"><span class="bi">${b.icon}</span><div><div class="nm">${l.qty}× ${b.name}</div><div class="meta">${l.price} AX each · you get ${HL_ECON.sellerGets(l.price)} each · ends in ${h}h</div></div><div class="acts"><button class="optbtn" type="button" data-pmcancel="${l.id}">Cancel</button></div></div>`; }).join('') : '';
+  }
+  function calcSell() {
+    const q = Math.max(1, Math.floor(+($('#pm-qty') || {}).value || 1)), pr = Math.max(0, Math.floor(+($('#pm-price') || {}).value || 0)), c = $('#pm-calc'); if (!c) return;
+    c.innerHTML = `Buyers pay <b>${(pr * q).toLocaleString('en-US')} AX</b> · you get <b>${HL_ECON.sellerGets(pr, q).toLocaleString('en-US')} AX</b> after the 5% Harbor cut`;
+  }
+  $('#s-market').addEventListener('input', e => { if (e.target.id === 'pm-qty' || e.target.id === 'pm-price') calcSell(); });
+  $('#s-market').addEventListener('change', e => { if (e.target.id === 'pm-bait') { PM.sellBait = e.target.value; renderPlayerMarket(); } });
+  $('#s-market').addEventListener('click', async e => {
+    const t = e.target.closest('button'); if (!t || t.disabled) return;
+    if (t.dataset.pmbuy) { t.disabled = true; const r = await marketOp('buy', { id: t.dataset.pmbuy, qty: 1 }); if (r && r.ok) { SFX.coin(); toast('Bought! It\'s in your bait bag and on the hook.', 'good'); } }
+    else if (t.dataset.pmcancel) { const r = await marketOp('cancel', { id: t.dataset.pmcancel }); if (r && r.ok) toast('Listing cancelled. Your bait is back.'); }
+    else if (t.id === 'pm-list') { t.disabled = true; const r = await marketOp('list', { bait: $('#pm-bait').value, qty: +$('#pm-qty').value, price: +$('#pm-price').value }); if (r && r.ok) { SFX.tone(880, 0.1, 'triangle', 0.2); toast('Listed! You\'ll get a message when it sells.', 'good'); } }
+  });
+  setInterval(() => { if (!ACC.online) return; const every = S.tab === 'market' ? 15e3 : 60e3; if (Date.now() - PM.at > every) fetchMarket(); }, 5000);
   function renderMarket() {
-    $('#mk-dot').hidden = true; renderWallet(); renderAccount();
+    $('#mk-dot').hidden = true; renderWallet(); renderAccount(); renderPlayerMarket(); if (!PM.data || Date.now() - PM.at > 10e3) fetchMarket();
     const left = buybackLeft(), pool = ACC.treasury ? ACC.treasury.ax : null;
     $('#mk-treasury').innerHTML = `<span class="ic">⚓</span><b>Harbor Treasury${pool != null ? ` · ${pool.toLocaleString('en-US')} AX` : ''}</b>
       <small>Topped up by HookLine trading fees. It buys your fish every day, so a good catch pays twice: the trade, then the fish.</small>
@@ -3688,7 +3797,8 @@
   $('#lake-list').addEventListener('click', e => { const b = e.target.closest('[data-lake]'); if (b) switchLake(+b.dataset.lake); });
   $('#ht-tut').addEventListener('click', () => { SAVE.tut = 0; persist(); $('#o-howto').hidden = true; setTab('lake'); });
   $('#pd-close').addEventListener('click', () => { $('#o-podium').hidden = true; });
-  $('#roundbox').addEventListener('click', () => { renderPlayers(); $('#o-players').hidden = false; });
+  $('#roundbox').addEventListener('click', () => { const rb = $('#roundbox'); if (W < 481 && rb.classList.contains('mini')) { rb.classList.remove('mini'); clearTimeout(rb._t); rb._t = setTimeout(() => rb.classList.add('mini'), 6000); return; } renderPlayers(); $('#o-players').hidden = false; });
+  $('#kitbar').addEventListener('click', () => { const k = $('#kit'), open = k.hidden; k.hidden = !open; $('#kitbar').setAttribute('aria-expanded', String(open)); showPanel($('#fight').hidden ? 'main' : 'fight'); });
   $('#emote-pick').innerHTML = EMOTES.map((e, i) => `<button type="button" data-em="${i}" aria-label="Emote ${i + 1}">${e}</button>`).join('');
   $('#emote-btn').addEventListener('click', () => { $('#emote-pick').hidden = !$('#emote-pick').hidden; });
   $('#emote-pick').addEventListener('click', e => { const b = e.target.closest('[data-em]'); if (b) sendEmote(+b.dataset.em); });
@@ -3732,7 +3842,7 @@
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
   $('#sail-go').addEventListener('click', () => { const b = BOATS[sailIdx]; if (!SAVE.owned[b.id]) { if (!econ('buy', { slot: 'boat', id: b.id }).ok) return; SFX.coin(); persist(); renderAll(); renderSail(); return; } closeSail(); });
-  window.HookLineDebug = { S, ME, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; }, endRound: () => endRound(), skipOnboarding: () => { SAVE.onboarded = true; persist(); showOnboarding(false); }, mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
+  window.HookLineDebug = { S, ME, ACC, PM, cam: camera, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; camera.position.set(x, 14, z + 14); S.camLook = null; }, endRound: () => endRound(), skipOnboarding: () => { SAVE.onboarded = true; persist(); showOnboarding(false); }, mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
 
   /* boot */
   (async () => {

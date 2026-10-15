@@ -22,6 +22,7 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 let db;
 try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (_) { db = null; }
 if (!db || !db.accounts) db = { v: 1, accounts: {}, sessions: {}, privy: {}, treasury: null };
+if (!db.market) db.market = { listings: [], sales: [] };
 if (!db.treasury) db.treasury = { ax: +process.env.TREASURY_AX || 50000, in: 0, out: 0 };
 let saveT = null;
 function save() {
@@ -118,6 +119,70 @@ async function verifyPrivy(token) {
   return payload;
 }
 
+/* ---------- player market: bait for AX, escrowed on the server ----------
+   Listing takes the bait out of the seller's inventory; buying moves AX buyer -> seller minus the Harbor fee,
+   which goes into the Treasury. Cancel or expiry gives the bait back. Sellers hear about sales in their inbox. */
+const M = ECON.MARKET;
+const baitOk = id => ECON.BAITS.some(b => b.id === id);
+function inbox(acc, msg) { acc.inbox = acc.inbox || []; acc.inbox.push({ t: Date.now(), ...msg }); if (acc.inbox.length > 30) acc.inbox.splice(0, acc.inbox.length - 30); }
+function expireListings() {
+  const now = Date.now(); let changed = false;
+  db.market.listings = db.market.listings.filter(l => {
+    if (now - l.t < M.ttl) return true;
+    const seller = db.accounts[l.seller]; if (seller) { ECON.normalize(seller.econ); seller.econ.baits[l.bait] = (seller.econ.baits[l.bait] || 0) + l.qty; inbox(seller, { k: 'expired', bait: l.bait, qty: l.qty }); }
+    changed = true; return false;
+  });
+  if (changed) save();
+}
+function marketStats() {
+  const out = {};
+  for (const b of ECON.BAITS) {
+    const sold = db.market.sales.filter(x => x.bait === b.id).slice(-20), ls = db.market.listings.filter(l => l.bait === b.id);
+    out[b.id] = { avg: sold.length ? Math.round(sold.reduce((a, x) => a + x.price, 0) / sold.length) : null, last: sold.length ? sold[sold.length - 1].price : null, best: ls.length ? Math.min(...ls.map(l => l.price)) : null, qty: ls.reduce((a, l) => a + l.qty, 0) };
+  }
+  return out;
+}
+function marketView(acc) {
+  expireListings();
+  const all = db.market.listings.slice().sort((a, b) => a.price - b.price || a.t - b.t);
+  const box = acc.inbox || []; acc.inbox = []; if (box.length) save();
+  return { listings: all.filter(l => l.seller !== acc.id).slice(0, 60).map(l => ({ id: l.id, bait: l.bait, qty: l.qty, price: l.price, nick: l.nick, t: l.t })),
+    mine: all.filter(l => l.seller === acc.id).map(l => ({ id: l.id, bait: l.bait, qty: l.qty, price: l.price, t: l.t, ends: l.t + M.ttl })), stats: marketStats(), inbox: box };
+}
+function marketList(acc, a) {
+  const bait = String(a.bait || ''), qty = Math.floor(+a.qty || 0), price = Math.floor(+a.price || 0);
+  if (!baitOk(bait)) return 'unknown bait';
+  if (qty < 1 || qty > M.maxQty) return `list between 1 and ${M.maxQty}`;
+  if (price < M.minPrice || price > M.maxPrice) return `price must be ${M.minPrice} to ${M.maxPrice} AX`;
+  if (db.market.listings.filter(l => l.seller === acc.id).length >= M.maxListings) return `you can have ${M.maxListings} listings at once`;
+  const e = ECON.normalize(acc.econ); if ((e.baits[bait] || 0) < qty) return 'you don\'t have that much bait';
+  e.baits[bait] -= qty; if (!e.baits[bait] && e.baitEq === bait) e.baitEq = null;
+  const l = { id: newId('l'), seller: acc.id, nick: acc.nick || acc.profile.nick || 'Angler', bait, qty, price, t: Date.now() };
+  db.market.listings.push(l); save(); ledger({ acc: acc.id, a: 'list', bait, qty, price, l: l.id });
+  return null;
+}
+function marketBuy(acc, a) {
+  expireListings();
+  const l = db.market.listings.find(x => x.id === a.id); if (!l) return 'that listing is gone';
+  if (l.seller === acc.id) return 'that\'s your own listing';
+  const qty = Math.max(1, Math.min(l.qty, Math.floor(+a.qty || 1))), cost = l.price * qty, e = ECON.normalize(acc.econ);
+  if (e.ax < cost) return 'not enough AX';
+  const seller = db.accounts[l.seller]; const gets = ECON.sellerGets(l.price, qty), fee = cost - gets;
+  e.ax -= cost; e.baits[l.bait] = (e.baits[l.bait] || 0) + qty; if (!e.baitEq) e.baitEq = l.bait;
+  if (seller) { ECON.normalize(seller.econ); seller.econ.ax += gets; inbox(seller, { k: 'sold', bait: l.bait, qty, price: l.price, ax: gets, buyer: acc.nick || 'an angler' }); }
+  db.treasury.ax += fee; db.treasury.in += fee;
+  l.qty -= qty; if (l.qty <= 0) db.market.listings = db.market.listings.filter(x => x !== l);
+  db.market.sales.push({ bait: l.bait, price: l.price, qty, t: Date.now() }); if (db.market.sales.length > 500) db.market.sales.splice(0, db.market.sales.length - 500);
+  save(); ledger({ acc: acc.id, a: 'mbuy', l: l.id, bait: l.bait, qty, d: -cost, ax: e.ax }); ledger({ acc: l.seller, a: 'msell', l: l.id, d: gets, fee });
+  return null;
+}
+function marketCancel(acc, a) {
+  const l = db.market.listings.find(x => x.id === a.id && x.seller === acc.id); if (!l) return 'that listing is gone';
+  const e = ECON.normalize(acc.econ); e.baits[l.bait] = (e.baits[l.bait] || 0) + l.qty;
+  db.market.listings = db.market.listings.filter(x => x !== l); save(); ledger({ acc: acc.id, a: 'unlist', l: l.id });
+  return null;
+}
+
 /* ---------- routes ---------- */
 async function handle(req, res, url) {
   const p = url.pathname, method = req.method;
@@ -185,6 +250,16 @@ async function handle(req, res, url) {
         save();
       }
       return sendJson(res, 200, { ok: r.ok, error: r.err, out: r.out, econ: ECON.pick(acc.econ), treasury: publicTreasury() }), true;
+    }
+
+    // player market
+    if (p === '/api/market' && method === 'GET') return sendJson(res, 200, { ok: true, ...marketView(acc), econ: ECON.pick(acc.econ), treasury: publicTreasury() }), true;
+    if (p.startsWith('/api/market/') && method === 'POST') {
+      if (!allow('econ:' + acc.id, 20, 8)) return sendJson(res, 429, { ok: false, error: 'slow down' }), true;
+      const body = await readBody(req), op = p.slice('/api/market/'.length);
+      const fn = { list: marketList, buy: marketBuy, cancel: marketCancel }[op]; if (!fn) return false;
+      const err = fn(acc, body);
+      return sendJson(res, 200, { ok: !err, error: err || undefined, ...marketView(acc), econ: ECON.pick(acc.econ), treasury: publicTreasury() }), true;
     }
 
     return false;
