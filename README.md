@@ -89,6 +89,9 @@ to `ledger.jsonl`.
 | `POST /api/wallet/nonce`, `/api/wallet/link` | prove wallet ownership (EIP-191 signature) and find the player's Lighter accounts |
 | `POST /api/catch/real` | a real fish closed: rebuilt from the player's Lighter fills (`/api/v1/trades`), paid on Lighter's realized PnL; each trade id counts once |
 | `POST /api/events` | analytics events (whitelisted names), aggregated per day, milestones per account |
+| `GET /api/referral` | your invite code; `/?r=CODE` links new players (friend: Glitter Bait on joining, +100 AX at the tutorial; inviter: +150 AX + Golden Grub; paid from the treasury, not for same-network accounts, 20/day cap) |
+| `GET/POST /api/admin/players`, `/api/admin/player` | admin: search players, detail with AX history, grant/take AX, give bait, rename, sign out everywhere, suspend |
+| `GET /api/admin/listings`, `POST /api/admin/listing/remove` | admin: market moderation |
 | `GET /api/admin/stats` · `/admin.html` | ops dashboard: DAU, funnel, retention, economy, crashes (header `x-admin-token`) |
 | `POST /api/admin/treasury` | top the treasury up from fee income: `{add, note}`, header `x-admin-token` |
 

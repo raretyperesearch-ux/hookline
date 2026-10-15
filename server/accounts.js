@@ -25,7 +25,8 @@ try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (_) { db = null
 if (!db || !db.accounts) db = { v: 1, accounts: {}, sessions: {}, privy: {}, treasury: null };
 if (!db.market) db.market = { listings: [], sales: [] };
 if (!db.analytics) db.analytics = { days: {} };
-if (!db.wallets) db.wallets = {};   // wallet address -> account id (one HookLine account per wallet)
+if (!db.wallets) db.wallets = {};
+if (!db.refs) db.refs = {};   // referral code -> account id   // wallet address -> account id (one HookLine account per wallet)
 if (!db.treasury) db.treasury = { ax: +process.env.TREASURY_AX || 50000, in: 0, out: 0 };
 let saveT = null, writing = false, again = false;
 // write the whole file at most every 1.5s, off the request path; a write in flight queues one more
@@ -126,7 +127,7 @@ function authed(req) {
   return acc;
 }
 // what the browser gets back: knife charges use -1 for "never dulls" (JSON has no Infinity)
-const view = acc => ({ wallet: acc.wallet || null, lighter: acc.lighter || [], id: acc.id, kind: acc.kind, nick: acc.nick || acc.profile.nick || '', coat: acc.coat || acc.profile.coat || null, email: acc.email || null, econ: ECON.pick(ECON.normalize(acc.econ)), profile: acc.profile, mode: MODE });
+const view = acc => ({ banned: !!acc.banned, referredBy: !!acc.referredBy, wallet: acc.wallet || null, lighter: acc.lighter || [], id: acc.id, kind: acc.kind, nick: acc.nick || acc.profile.nick || '', coat: acc.coat || acc.profile.coat || null, email: acc.email || null, econ: ECON.pick(ECON.normalize(acc.econ)), profile: acc.profile, mode: MODE });
 const publicTreasury = () => ({ ax: Math.floor(db.treasury.ax), in: Math.floor(db.treasury.in), out: Math.floor(db.treasury.out), buyback: ECON.DAILY_BUYBACK });
 
 /* ---------- Privy: verify the access token the browser got at sign-in ---------- */
@@ -220,7 +221,7 @@ function track(acc, name, now = Date.now()) {
   if (!acc) return;
   if (!acc.evDay || acc.evDay.d !== d) { acc.evDay = { d, seen: {} }; A.users.active = (A.users.active || 0) + 1; acc.days = acc.days || []; if (acc.days[acc.days.length - 1] !== d) { acc.days.push(d); if (acc.days.length > 120) acc.days.shift(); } }
   if (!acc.evDay.seen[name]) { acc.evDay.seen[name] = 1; A.users[name] = (A.users[name] || 0) + 1; }
-  acc.ms = acc.ms || {}; if (MILESTONES.includes(name) && !acc.ms[name]) acc.ms[name] = now;
+  acc.ms = acc.ms || {}; if (MILESTONES.includes(name) && !acc.ms[name]) { acc.ms[name] = now; if (name === 'tutorial_done') payReferral(acc); }
 }
 setInterval(() => { const keep = Object.keys(db.analytics.days).sort().slice(-180); for (const k of Object.keys(db.analytics.days)) if (!keep.includes(k)) delete db.analytics.days[k]; }, 6 * 3600e3);
 function adminStats(q) {
@@ -245,6 +246,60 @@ function adminStats(q) {
     economy: { treasury: publicTreasury(), axInCirculation: econ.reduce((t, e) => t + e.ax, 0), fishInCoolers: econ.reduce((t, e) => t + e.cooler.length, 0), baitHeld: econ.reduce((t, e) => t + Object.values(e.baits).reduce((x, y) => x + y, 0), 0), listings: db.market.listings.length, marketSales7d: db.market.sales.filter(x => now - x.t < 7 * 864e5).length, wallets: accs.filter(a => a.wallet).length, verifiedFish: accs.reduce((t, a) => t + (a.verifiedCatches || 0), 0) },
     errors: { lastDay: recentErrors.filter(e => now - e.t < 864e5).length, latest: recentErrors.slice(-5).reverse().map(e => ({ t: e.t, msg: e.msg, where: e.where })) },
   };
+}
+
+/* ---------- referrals: invite a friend, both get rewarded once the friend finishes the tutorial ----------
+   The friend gets a Glitter Bait on joining and +100 AX at the tutorial; the inviter gets +150 AX and a Golden Grub.
+   Paid from the Harbor Treasury. No reward when both come from the same network; at most 20 rewards per inviter per day. */
+const REF = { joinBait: 'glitter', friendAx: 100, inviterAx: 150, inviterBait: 'grub', perDay: 20 };
+const REF_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function refCode(acc) {
+  if (acc.ref && db.refs[acc.ref] === acc.id) return acc.ref;
+  let c; do { c = Array.from(crypto.randomBytes(6), b => REF_ABC[b % REF_ABC.length]).join(''); } while (db.refs[c]);
+  acc.ref = c; db.refs[c] = acc.id; save(); return c;
+}
+function payReferral(acc) {
+  if (!acc.referredBy || acc.refPaid) return;
+  const inviter = db.accounts[acc.referredBy]; acc.refPaid = Date.now();
+  if (!inviter || inviter.banned) return;
+  if (inviter.ipHash && acc.ipHash && inviter.ipHash === acc.ipHash) { acc.refPaid = 'same-network'; ledger({ acc: inviter.id, a: 'ref-skip', friend: acc.id, why: 'same network' }); return; }
+  const day = dayKey(); inviter.refDay = inviter.refDay && inviter.refDay.d === day ? inviter.refDay : { d: day, n: 0 };
+  if (inviter.refDay.n >= REF.perDay) { acc.refPaid = 'cap'; return; }
+  inviter.refDay.n++;
+  const fe = ECON.normalize(acc.econ), ie = ECON.normalize(inviter.econ);
+  fe.ax += REF.friendAx; ie.ax += REF.inviterAx; ie.baits[REF.inviterBait] = (ie.baits[REF.inviterBait] || 0) + 1;
+  db.treasury.ax -= REF.friendAx + REF.inviterAx; db.treasury.out += REF.friendAx + REF.inviterAx;
+  inviter.refCount = (inviter.refCount || 0) + 1;
+  inbox(inviter, { k: 'ref', who: acc.nick || 'A friend', ax: REF.inviterAx, bait: REF.inviterBait });
+  inbox(acc, { k: 'refjoin', who: inviter.nick || 'your friend', ax: REF.friendAx });
+  ledger({ acc: inviter.id, a: 'ref', friend: acc.id, d: REF.inviterAx, ax: ie.ax }); ledger({ acc: acc.id, a: 'ref-friend', d: REF.friendAx, ax: fe.ax });
+  save();
+}
+
+/* ---------- admin: find players, look closer, fix things (every action goes in the ledger) ---------- */
+const isAdmin = req => ADMIN_TOKEN && req.headers['x-admin-token'] === ADMIN_TOKEN;
+const adminRow = a => ({ id: a.id, nick: a.nick || (a.profile && a.profile.nick) || '', kind: a.kind, email: a.email || null, wallet: a.wallet || null, ax: ECON.normalize(a.econ).ax, lvl: (a.profile && a.profile.lvl) || 1, created: a.created, seen: a.seen, banned: !!a.banned, refs: a.refCount || 0 });
+function ledgerFor(id, max = 60) {
+  try {
+    const st = fs.statSync(LEDGER_FILE), len = Math.min(st.size, 4 * 1048576), fd = fs.openSync(LEDGER_FILE, 'r'), buf = Buffer.alloc(len);
+    fs.readSync(fd, buf, 0, len, st.size - len); fs.closeSync(fd);
+    return buf.toString('utf8').split('\n').filter(l => l.includes(id)).slice(-max).reverse().map(l => { try { return JSON.parse(l); } catch (_) { return null; } }).filter(Boolean);
+  } catch (_) { return []; }
+}
+function adminAction(a, b) {
+  const e = ECON.normalize(a.econ), note = String(b.note || '').slice(0, 200);
+  switch (b.action) {
+    case 'ax': { const d = Math.trunc(+b.amount || 0); if (!d) return 'amount must be a whole number'; if (e.ax + d < 0) return 'that would make their AX negative'; e.ax += d; ledger({ acc: a.id, a: 'admin-ax', d, ax: e.ax, note }); return null; }
+    case 'bait': { const q = Math.trunc(+b.qty || 0); if (!ECON.BAITS.some(x => x.id === b.bait) || !q) return 'pick a bait and a quantity'; e.baits[b.bait] = Math.max(0, (e.baits[b.bait] || 0) + q); ledger({ acc: a.id, a: 'admin-bait', bait: b.bait, q, note }); return null; }
+    case 'rename': { const n = cleanNick(b.nick); if (!n) return 'name is empty'; a.nick = n; a.profile.nick = n; ledger({ acc: a.id, a: 'admin-rename', nick: n, note }); return null; }
+    case 'logout': { for (const [k, sv] of Object.entries(db.sessions)) if (sv.acc === a.id) delete db.sessions[k]; ledger({ acc: a.id, a: 'admin-logout', note }); return null; }
+    case 'ban': case 'unban': {
+      a.banned = b.action === 'ban' ? { t: Date.now(), note } : null;
+      if (a.banned) for (const l of db.market.listings.filter(x => x.seller === a.id)) { e.baits[l.bait] = (e.baits[l.bait] || 0) + l.qty; db.market.listings = db.market.listings.filter(x => x !== l); }
+      ledger({ acc: a.id, a: 'admin-' + b.action, note }); return null;
+    }
+    default: return 'unknown action';
+  }
 }
 
 /* ---------- routes ---------- */
@@ -281,8 +336,9 @@ async function handle(req, res, url) {
       const body = await readBody(req); const have = authed(req);
       if (have) return sendJson(res, 200, { ok: true, account: view(have), treasury: publicTreasury() }), true;
       if (!allow('guest:' + clientIp(req), 60, 60 / 3600)) return sendJson(res, 429, { ok: false, error: 'too many new accounts from this network, try again later' }), true;
-      const acc = createAccount('guest', { econ: importEcon(body.import), profile: cleanProfile(body.profile) });
+      const acc = createAccount('guest', { econ: importEcon(body.import), profile: cleanProfile(body.profile), ipHash: sha('ip:' + clientIp(req)).slice(0, 16) });
       acc.nick = cleanNick(acc.profile.nick); acc.coat = cleanCoat(acc.profile.coat);
+      const inviter = body.ref && db.refs[String(body.ref).toUpperCase()]; if (inviter && db.accounts[inviter]) { acc.referredBy = inviter; ECON.normalize(acc.econ).baits[REF.joinBait] = (acc.econ.baits[REF.joinBait] || 0) + 1; acc.econ.baitEq = acc.econ.baitEq || REF.joinBait; ledger({ acc: acc.id, a: 'ref-join', by: inviter }); }
       const token = newSession(acc); ledger({ acc: acc.id, a: 'create', ax: acc.econ.ax });
       return sendJson(res, 200, { ok: true, token, account: view(acc), treasury: publicTreasury() }), true;
     }
@@ -294,8 +350,40 @@ async function handle(req, res, url) {
       db.treasury.ax += add; if (add > 0) db.treasury.in += add; save(); ledger({ a: 'treasury', d: add, note: String(body.note || '').slice(0, 200) });
       return sendJson(res, 200, { ok: true, treasury: publicTreasury() }), true;
     }
+    if (p.startsWith('/api/admin/')) {
+      if (!isAdmin(req)) return sendJson(res, 403, { ok: false, error: 'forbidden' }), true;
+      if (p === '/api/admin/players' && method === 'GET') {
+        const q = String(url.searchParams.get('q') || '').trim().toLowerCase();
+        let list = Object.values(db.accounts);
+        if (q) list = list.filter(a => [a.id, a.nick, a.email, a.wallet, a.privy, a.ref].some(v => v && String(v).toLowerCase().includes(q)));
+        list.sort((x, y) => (y.seen || 0) - (x.seen || 0));
+        return sendJson(res, 200, { ok: true, total: list.length, players: list.slice(0, 50).map(adminRow) }), true;
+      }
+      if (p === '/api/admin/player' && method === 'GET') {
+        const a = db.accounts[url.searchParams.get('id')]; if (!a) return sendJson(res, 404, { ok: false, error: 'no such player' }), true;
+        const invited = Object.values(db.accounts).filter(x => x.referredBy === a.id).map(x => ({ id: x.id, nick: x.nick, created: x.created, paid: x.refPaid || null }));
+        return sendJson(res, 200, { ok: true, player: { ...adminRow(a), econ: ECON.pick(ECON.normalize(a.econ)), profile: a.profile, milestones: a.ms || {}, days: (a.days || []).slice(-30), referredBy: a.referredBy || null, refCode: a.ref || null, invited, listings: db.market.listings.filter(l => l.seller === a.id), lighter: a.lighter || [], verifiedCatches: a.verifiedCatches || 0 }, ledger: ledgerFor(a.id) }), true;
+      }
+      if (p === '/api/admin/player' && method === 'POST') {
+        const b = await readBody(req), a = db.accounts[b.id]; if (!a) return sendJson(res, 404, { ok: false, error: 'no such player' }), true;
+        const err = adminAction(a, b); save();
+        return sendJson(res, 200, { ok: !err, error: err || undefined, player: adminRow(a) }), true;
+      }
+      if (p === '/api/admin/listings' && method === 'GET') return sendJson(res, 200, { ok: true, listings: db.market.listings.slice().sort((x, y) => y.t - x.t).slice(0, 100) }), true;
+      if (p === '/api/admin/listing/remove' && method === 'POST') {
+        const b = await readBody(req), l = db.market.listings.find(x => x.id === b.id); if (!l) return sendJson(res, 404, { ok: false, error: 'listing is gone' }), true;
+        const seller = db.accounts[l.seller]; if (seller) { const e = ECON.normalize(seller.econ); e.baits[l.bait] = (e.baits[l.bait] || 0) + l.qty; inbox(seller, { k: 'removed', bait: l.bait, qty: l.qty }); }
+        db.market.listings = db.market.listings.filter(x => x !== l); save(); ledger({ acc: l.seller, a: 'admin-unlist', l: l.id, note: String(b.note || '').slice(0, 200) });
+        return sendJson(res, 200, { ok: true }), true;
+      }
+    }
     const acc = authed(req);
     if (!acc) return sendJson(res, 401, { ok: false, error: 'no session' }), true;
+    if (acc.banned && p !== '/api/me') return sendJson(res, 403, { ok: false, error: 'this account is suspended. Contact support if you think this is a mistake.' }), true;
+    if (p === '/api/referral' && method === 'GET') {
+      const code = refCode(acc), invited = Object.values(db.accounts).filter(x => x.referredBy === acc.id);
+      return sendJson(res, 200, { ok: true, code, invited: invited.length, rewarded: invited.filter(x => typeof x.refPaid === 'number').length, reward: { you: REF.inviterAx, bait: REF.inviterBait, friend: REF.friendAx, friendBait: REF.joinBait } }), true;
+    }
 
     if (p === '/api/me' && method === 'GET') return sendJson(res, 200, { ok: true, account: view(acc), treasury: publicTreasury() }), true;
 

@@ -663,6 +663,10 @@
   .onb-legal { display: block; text-align: center; color: #9ab8d3; font-size: 11px; margin-top: 8px; line-height: 1.4; }
   .legal-links { font-size: 12px; color: #9ab8d3; margin: 0 0 10px; }
   #real-demo-rib { left: 14px !important; right: auto !important; top: 16px !important; transform: none !important; }
+  .invite { background: linear-gradient(135deg, #1d4f2f, #0e3559); border: 2px solid #3ddc9766; border-radius: 16px; padding: 12px 14px; margin: 0 0 12px; display: grid; gap: 8px; }
+  .invite b { font-family: var(--display); font-size: 16px; } .invite p { margin: 0; font-size: 12.5px; color: #cfe6f7; line-height: 1.45; }
+  .invite .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; } .invite .inv-stats { font-size: 12px; color: #b9d6ee; }
+  .invite code { display: block; background: #06213b; border-radius: 10px; padding: 9px 10px; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
@@ -773,6 +777,7 @@
       <h2>Gear</h2>
       <p class="sub">Everything here is bought with AX. Gear changes how you fish, not the market.</p>
       <div class="acct" id="acct"></div>
+      <div class="invite" id="invite" hidden></div>
       <label class="lc-toggle voice-toggle"><input type="checkbox" id="voice-on" checked> 🎙️ Fisherman voice</label>
       <div class="gfx-row"><span>🖥️ Graphics</span><div class="seg" id="gfx"><button type="button" data-gfx="auto">Auto</button><button type="button" data-gfx="high">High</button><button type="button" data-gfx="low">Battery saver</button></div></div>
       <p class="legal-links"><a href="terms.html" target="_blank" rel="noopener">Terms</a> · <a href="privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="risk.html" target="_blank" rel="noopener">Risk disclosure</a></p>
@@ -1318,6 +1323,7 @@
      AX, gear, the cooler and bait change through econ(): the result is predicted here with the shared rulebook
      (game/economy.js) so the game feels instant, then the server's answer replaces it. If the server can't be
      reached the game keeps working on this device and says so. */
+  (() => { const r = new URLSearchParams(location.search).get('r'); if (r && /^[A-Za-z0-9]{4,12}$/.test(r)) { try { if (!localStorage.getItem('hookline-session-v1')) localStorage.setItem('hookline-ref', r.toUpperCase()); } catch (_) { } history.replaceState(null, '', location.pathname + location.search.replace(/[?&]r=[^&]*/, '').replace(/^&/, '?') + location.hash); } })();
   const HAD_SAVE = (() => { try { return !!localStorage.getItem('hookline-lighter-v1'); } catch (_) { return false; } })();
   const ACC = { token: null, id: null, kind: 'local', online: false, treasury: null, mode: 'demo', pending: 0, chain: Promise.resolve() };
   const TOKEN_KEY = 'hookline-session-v1';
@@ -1345,7 +1351,10 @@
     try { ACC.token = localStorage.getItem(TOKEN_KEY); } catch (_) { }
     try {
       const first = !ACC.token;
-      const r = await api('/api/session', first ? { import: HAD_SAVE ? econOf() : null, profile: profileOf() } : {});
+      let ref = null; try { ref = localStorage.getItem('hookline-ref'); } catch (_) { }
+      const r = await api('/api/session', first ? { import: HAD_SAVE ? econOf() : null, profile: profileOf(), ref } : {});
+      if (first && ref) { try { localStorage.removeItem('hookline-ref'); } catch (_) { } if (r.account && r.account.referredBy) setTimeout(() => toast('🎁 You joined through a friend\'s link: a free Glitter Bait is on your hook!', 'good'), 4000); }
+      if (r.account && r.account.banned) setTimeout(() => toast('This account is suspended. Contact support if you think this is a mistake.', 'warn'), 2500);
       if (!r.ok && ACC.token === null && !first) return accountBoot();   // the old session expired: start over
       if (!r.ok) throw new Error(r.error || 'no session');
       if (r.token) { ACC.token = r.token; try { localStorage.setItem(TOKEN_KEY, r.token); } catch (_) { } }
@@ -3709,6 +3718,21 @@
   function buybackLeft() { if (SAVE.sold.day !== HL_ECON.dayStr()) return DAILY_BUYBACK; return HL_ECON.buybackLeft(SAVE); }
   const canCraft = b => HL_ECON.canCraft(SAVE, b);
   function recipeText(r) { return [r.fish ? `${r.fish} fish` : '', r.scraps ? `${r.scraps} scrap${r.scraps > 1 ? 's' : ''}` : ''].filter(Boolean).join(' + '); }
+  const INV = { data: null, at: 0 };
+  async function renderInvite() {
+    const el = $('#invite'); if (!el) return;
+    if (!ACC.online || !ACC.token) { el.hidden = true; return; }
+    if (!INV.data || Date.now() - INV.at > 60e3) { const r = await api('/api/referral').catch(() => null); if (r && r.ok) { INV.data = r; INV.at = Date.now(); } }
+    const d = INV.data; if (!d) { el.hidden = true; return; }
+    const link = `${location.origin}/?r=${d.code}`;
+    el.hidden = false;
+    el.innerHTML = `<b>🎁 Invite a friend</b><p>They start with a free Glitter Bait. When they finish the tutorial you get <b>+${d.reward.you} AX and a Golden Grub</b>, and they get +${d.reward.friend} AX.</p>
+      <code>${esc(link)}</code><div class="row"><button class="big-btn reel" type="button" id="inv-share">SHARE MY LINK</button><button class="optbtn" type="button" id="inv-copy">Copy</button></div>
+      <span class="inv-stats">${d.invited ? `${d.invited} joined with your link · ${d.rewarded} finished the tutorial` : 'Nobody has used your link yet.'}</span>`;
+    const copy = async () => { try { await navigator.clipboard.writeText(link); toast('Link copied. Send it to a friend!', 'good'); } catch (_) { toast(link); } };
+    $('#inv-copy').onclick = copy;
+    $('#inv-share').onclick = async () => { track('tab'); if (navigator.share) { try { await navigator.share({ title: 'HookLine', text: 'Come fish with me on HookLine: every fish is a real market. You start with a free Glitter Bait 🎣', url: link }); return; } catch (_) { return; } } copy(); };
+  }
   function renderAccount() {
     const signed = ACC.kind === 'privy', who = SAVE.nick || 'Angler', coat = SAVE.coat || COATS[0];
     const html = !ACC.online ? `<i class="av" style="background:${coat}"></i><b>${esc(who)} · offline</b><small>Can't reach the HookLine server, so this session is saved on this device only. It syncs when you're back.</small>`
@@ -3743,7 +3767,10 @@
     if (fresh) { PM.applied = my; PM.data = r; PM.at = Date.now(); if (r.treasury) ACC.treasury = r.treasury; if (r.econ && ACC.pending === 0) applyEcon(r.econ); }
     for (const m of r.inbox || []) { const b = BAITS.find(x => x.id === m.bait) || { icon: '🪝', name: m.bait };
       if (m.k === 'sold') { toast(`💰 ${m.buyer} bought ${m.qty}× ${b.name} from you: +${m.ax} AX`, 'good'); SFX.coin(); }
-      else if (m.k === 'expired') toast(`Your ${b.name} listing ended unsold. ${m.qty} back in your bag.`); }
+      else if (m.k === 'expired') toast(`Your ${b.name} listing ended unsold. ${m.qty} back in your bag.`);
+      else if (m.k === 'removed') toast(`A moderator took down your ${b.name} listing. ${m.qty} back in your bag.`);
+      else if (m.k === 'ref') { toast(`🎉 ${m.who} joined with your link and finished the tutorial: +${m.ax} AX and a Golden Grub!`, 'good'); SFX.coin(); }
+      else if (m.k === 'refjoin') { toast(`🎉 Tutorial done! ${m.who} invited you: +${m.ax} AX`, 'good'); SFX.coin(); } }
     if ((r.inbox || []).length) { renderAll(); $('#mk-dot').hidden = S.tab === 'market'; }
     if (S.tab === 'market') renderMarket();
   }
@@ -3826,7 +3853,7 @@
     $$('.tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab || (tab === 'lakes' && b.dataset.tab === 'lake'))));
     for (const id of ['chest', 'gear', 'market', 'dex', 'quests', 'lakes']) $('#s-' + id).hidden = tab !== id;
     if (tab === 'dex' && SAVE.tut === 3) tutAdvance(4); if (tab === 'market' && SAVE.tut === 4) tutAdvance(5); if (tab === 'gear' && SAVE.tut === 5) tutAdvance(6);
-    if (tab === 'chest') renderTank(); if (tab === 'gear') { renderGear(); renderLighterCard(); renderAccount(); } if (tab === 'dex') renderDex(); if (tab === 'quests') renderQuests(); if (tab === 'market') renderMarket(); if (tab === 'lakes') renderLakes();
+    if (tab === 'chest') renderTank(); if (tab === 'gear') { renderGear(); renderLighterCard(); renderAccount(); renderInvite(); } if (tab === 'dex') renderDex(); if (tab === 'quests') renderQuests(); if (tab === 'market') renderMarket(); if (tab === 'lakes') renderLakes();
     if (tab !== 'lake') $('#tip').hidden = true;
   }
   function switchLake(i) {

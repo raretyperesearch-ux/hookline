@@ -26,6 +26,12 @@
   .err { font-family: ui-monospace, monospace; font-size: 12px; color: var(--ink2); overflow-wrap: anywhere; }
   .gate { max-width: 420px; margin: 12vh auto; } .gate input { width: 100%; margin: 8px 0; }
   .bad { color: var(--bad); } .good { color: var(--good); }
+  .prow { cursor: pointer; } .prow:hover td { background: var(--page); }
+  .pdet { border-top: 1px solid var(--grid); margin-top: 10px; padding-top: 10px; display: grid; gap: 10px; }
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 6px 14px; } .kv div span { display: block; color: var(--muted); font-size: 12px; }
+  .acts { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .acts input, .acts select { width: auto; }
+  .tag { font-size: 11px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--card-b); color: var(--ink2); } .tag.ban { color: var(--bad); border-color: var(--bad); }
+  .led { font-family: ui-monospace, monospace; font-size: 12px; color: var(--ink2); max-height: 220px; overflow: auto; }
 </style></head><body><main>
 <div class="gate card" id="gate" hidden>
   <h1>HookLine Ops</h1>
@@ -49,6 +55,15 @@
     <div class="card"><h2>Today: players who did each thing</h2><div id="today"></div></div>
     <div class="card"><h2>Crashes <span class="sub" id="err-sub"></span></h2><div id="errs"></div></div>
   </div>
+  <div class="card" style="margin-bottom:12px"><h2>Players</h2>
+    <div class="controls" style="margin-bottom:8px"><input id="pq" placeholder="Search name, ID, email, wallet or invite code" style="flex:1;min-width:200px"><button id="pgo" type="button">Search</button></div>
+    <div id="plist"></div><div id="pdet"></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>Market listings</h2><div id="listings"></div></div>
+    <div class="card"><h2>Harbor Treasury</h2><p class="sub">Top up from fee income (or take out, with a negative number). Logged in the ledger.</p>
+      <div class="controls"><input id="tadd" type="number" placeholder="AX, e.g. 10000" style="width:150px"><input id="tnote" placeholder="Note, e.g. fees Oct 14"><button id="tgo" type="button">Apply</button></div><p class="sub" id="tmsg"></p></div>
+  </div>
 </div>
 <div class="tip" id="tip" hidden></div>
 <script>
@@ -63,7 +78,7 @@
     const days = $('#range').value;
     const [r, h] = await Promise.all([fetch('/api/admin/stats?days=' + days, { headers: { 'x-admin-token': token } }).then(x => x.json()), fetch('/health').then(x => x.json()).catch(() => ({}))]);
     if (!r.ok) { gate(r.error === 'forbidden' ? 'That token was not accepted.' : (r.error || 'Could not load.')); return; }
-    $('#gate').hidden = true; $('#app').hidden = false; $('#upd').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    $('#gate').hidden = true; if ($('#app').hidden) { players(); listings(); } $('#app').hidden = false; $('#upd').textContent = 'Updated ' + new Date().toLocaleTimeString();
     const t = r.totals;
     $('#tiles').innerHTML = [['Online now', h.players], ['Active today', t.active1], ['Active 7 days', t.active7], ['Active 30 days', t.active30], ['Accounts', t.accounts], ['Signed in (Privy)', t.signedIn], [`New (${days}d)`, t.newInRange], ['Server CPU', h.cpu != null ? h.cpu + '%' : '–']]
       .map(([k, v]) => `<div class="tile"><b>${typeof v === 'string' ? v : fmt(v)}</b><span>${k}</span></div>`).join('');
@@ -98,6 +113,44 @@
     data.forEach((d, i) => { const y = i * row + 4, w = (W - L - 80) * d.v / max; s += `<text x="${L - 8}" y="${y + 14}" text-anchor="end" style="fill:var(--ink2);font-size:12px">${esc(d.k)}</text>${w > 0 ? `<rect x="${L}" y="${y + 3}" width="${Math.max(2, w)}" height="${row - 9}" rx="4" fill="var(--bar)"/>` : ''}<text x="${L + w + 6}" y="${y + 14}" style="fill:var(--ink);font-size:12px">${esc(d.lab)}</text>`; });
     el.innerHTML = s + '</svg>';
   }
+  const api = (path, body) => fetch(path, { method: body ? 'POST' : 'GET', headers: { 'x-admin-token': token, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }).then(r => r.json());
+  const ago = t => { if (!t) return '–'; const m = Math.round((Date.now() - t) / 6e4); return m < 60 ? m + 'm ago' : m < 2880 ? Math.round(m / 60) + 'h ago' : Math.round(m / 1440) + 'd ago'; };
+  async function players() {
+    const r = await api('/api/admin/players?q=' + encodeURIComponent($('#pq').value.trim()));
+    if (!r.ok) return;
+    $('#plist').innerHTML = `<p class="sub">${fmt(r.total)} match${r.total === 1 ? '' : 'es'}${r.total > 50 ? ', showing the 50 most recently seen' : ''}</p><table><thead><tr><th>Name</th><th>Type</th><th>AX</th><th>Lv</th><th>Invited</th><th>Last seen</th></tr></thead><tbody>${r.players.map(p => `<tr class="prow" data-id="${esc(p.id)}"><td>${esc(p.nick || '(no name)')} ${p.banned ? '<span class="tag ban">suspended</span>' : ''}</td><td>${p.kind === 'privy' ? 'signed in' : 'guest'}</td><td>${fmt(p.ax)}</td><td>${p.lvl}</td><td>${p.refs}</td><td>${ago(p.seen)}</td></tr>`).join('')}</tbody></table>`;
+    $('#plist').querySelectorAll('.prow').forEach(tr => tr.addEventListener('click', () => player(tr.dataset.id)));
+  }
+  async function player(id) {
+    const r = await api('/api/admin/player?id=' + encodeURIComponent(id)); if (!r.ok) return; const p = r.player, e = p.econ;
+    const baits = Object.entries(e.baits || {}).filter(([, n]) => n > 0).map(([k, n]) => `${n}× ${k}`).join(', ') || 'none';
+    $('#pdet').innerHTML = `<div class="pdet"><h2>${esc(p.nick || '(no name)')} <span class="tag">${p.kind === 'privy' ? 'signed in' : 'guest'}</span> ${p.banned ? '<span class="tag ban">suspended</span>' : ''}</h2>
+      <div class="kv"><div><span>Account ID</span>${esc(p.id)}</div><div><span>Email</span>${esc(p.email || '–')}</div><div><span>Wallet</span>${esc(p.wallet || '–')}</div><div><span>Lighter accounts</span>${esc((p.lighter || []).join(', ') || '–')}</div>
+        <div><span>AX</span>${fmt(e.ax)}</div><div><span>Level</span>${p.lvl}</div><div><span>Fish in cooler</span>${(e.cooler || []).length}</div><div><span>Scraps</span>${e.scraps}</div><div><span>Bait</span>${esc(baits)}</div>
+        <div><span>Rod</span>${esc(e.eq.rod)}</div><div><span>Verified real catches</span>${p.verifiedCatches}</div><div><span>Joined</span>${new Date(p.created).toLocaleDateString()}</div><div><span>Last seen</span>${ago(p.seen)}</div>
+        <div><span>Invite code</span>${esc(p.refCode || '–')}</div><div><span>Invited</span>${p.invited.length} (${p.invited.filter(x => typeof x.paid === 'number').length} rewarded)</div><div><span>Was invited</span>${p.referredBy ? 'yes' : 'no'}</div></div>
+      <div class="acts"><input id="a-ax" type="number" placeholder="± AX" style="width:100px"><input id="a-note" placeholder="Reason (goes in the ledger)" style="min-width:200px"><button data-act="ax">Apply AX</button></div>
+      <div class="acts"><select id="a-bait"><option value="worm">Lucky Worm</option><option value="chum">Chum Bucket</option><option value="glitter">Glitter Bait</option><option value="grub">Golden Grub</option></select><input id="a-q" type="number" value="1" style="width:70px"><button data-act="bait">Give bait</button>
+        <input id="a-nick" placeholder="New name" style="width:140px"><button data-act="rename">Rename</button><button data-act="logout">Sign out everywhere</button>
+        <button data-act="${p.banned ? 'unban' : 'ban'}" class="${p.banned ? '' : 'bad'}">${p.banned ? 'Unsuspend' : 'Suspend'}</button></div>
+      <p class="sub" id="a-msg"></p>
+      <div><h2>History</h2><div class="led">${r.ledger.map(l => `${new Date(l.t).toLocaleString()} · ${esc(l.a)}${l.d != null ? ` ${l.d > 0 ? '+' : ''}${l.d} AX` : ''}${l.ax != null ? ` → ${l.ax}` : ''}${l.note ? ` · “${esc(l.note)}”` : ''}`).join('<br>') || 'No entries yet.'}</div></div></div>`;
+    $('#pdet').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', async () => {
+      const act = b.dataset.act, note = $('#a-note').value.trim();
+      if ((act === 'ban' || act === 'ax') && !confirm(act === 'ban' ? `Suspend ${p.nick || p.id}? Their listings come down and they can't trade AX until unsuspended.` : `Change ${p.nick || p.id}'s AX by ${$('#a-ax').value}?`)) return;
+      const body = { id: p.id, action: act, note, amount: +$('#a-ax').value, bait: $('#a-bait').value, qty: +$('#a-q').value, nick: $('#a-nick').value };
+      const res = await api('/api/admin/player', body);
+      if (res.ok) { await player(p.id); players(); }
+      $('#a-msg').textContent = res.ok ? 'Done. ' + ({ ax: 'AX changed', bait: 'Bait given', rename: 'Renamed', logout: 'Signed out everywhere', ban: 'Suspended', unban: 'Unsuspended' }[act] || '') : res.error; $('#a-msg').className = res.ok ? 'sub good' : 'sub bad';
+    }));
+  }
+  async function listings() {
+    const r = await api('/api/admin/listings'); if (!r.ok) return;
+    $('#listings').innerHTML = r.listings.length ? `<table><thead><tr><th>Seller</th><th>Bait</th><th>Qty</th><th>Price</th><th></th></tr></thead><tbody>${r.listings.map(l => `<tr><td>${esc(l.nick)}</td><td>${esc(l.bait)}</td><td>${l.qty}</td><td>${fmt(l.price)} AX</td><td><button data-rm="${esc(l.id)}">Remove</button></td></tr>`).join('')}</tbody></table>` : '<p class="muted">No listings right now.</p>';
+    $('#listings').querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', async () => { if (!confirm('Take this listing down? The bait goes back to the seller.')) return; await api('/api/admin/listing/remove', { id: b.dataset.rm }); listings(); }));
+  }
+  $('#pgo').addEventListener('click', players); $('#pq').addEventListener('keydown', e => { if (e.key === 'Enter') players(); });
+  $('#tgo').addEventListener('click', async () => { const add = +$('#tadd').value; if (!add || !confirm(`Change the treasury by ${add} AX?`)) return; const r = await api('/api/admin/treasury', { add, note: $('#tnote').value }); $('#tmsg').textContent = r.ok ? `Treasury is now ${fmt(r.treasury.ax)} AX.` : r.error; if (r.ok) load(); });
   function gate(msg) { $('#app').hidden = true; $('#gate').hidden = false; const ge = $('#gate-err'); ge.hidden = !msg; ge.textContent = msg || ''; }
   $('#go').addEventListener('click', () => { token = $('#tok').value.trim(); try { localStorage.setItem('hookline-admin', token); } catch (_) { } load(); });
   $('#tok').addEventListener('keydown', e => { if (e.key === 'Enter') $('#go').click(); });
