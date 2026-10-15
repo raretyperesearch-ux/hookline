@@ -1055,6 +1055,15 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script>
+  // report crashes to the server (deduplicated, at most 5 per page load) so we know what breaks on real phones
+  (function () { const seen = new Set(); let n = 0;
+    const send = (msg, where, stack) => { const k = msg + where; if (seen.has(k) || n >= 5) return; seen.add(k); n++;
+      try { fetch('/api/client-error', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ msg, where, stack, v: 'web' }), keepalive: true }); } catch (_) { } };
+    window.addEventListener('error', e => { if (!e.message) return; send(String(e.message), `${(e.filename || '').split('/').pop()}:${e.lineno}:${e.colno}`, e.error && e.error.stack ? String(e.error.stack) : ''); });
+    window.addEventListener('unhandledrejection', e => { const r = e.reason; send('unhandled: ' + String(r && r.message || r), '', r && r.stack ? String(r.stack) : ''); });
+  })();
+</script>
 <script src="config.js"></script><script src="markets.js"></script><script src="economy.js"></script>
 <script src="hookline-real.js"></script>
 <script>

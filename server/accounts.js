@@ -40,6 +40,21 @@ function save() {
 function flush() { if (saveT) { clearTimeout(saveT); saveT = null; } try { fs.writeFileSync(DB_FILE + '.tmp', JSON.stringify(db)); fs.renameSync(DB_FILE + '.tmp', DB_FILE); } catch (_) { } }
 process.on('SIGTERM', () => { flush(); process.exit(0); });
 process.on('SIGINT', () => { flush(); process.exit(0); });
+// daily compressed snapshots under DATA_DIR/backups, 14 kept; GET /api/admin/backup downloads one on demand
+const zlib = require('zlib');
+const BACKUP_DIR = path.join(DATA_DIR, 'backups'); fs.mkdirSync(BACKUP_DIR, { recursive: true });
+function backup() {
+  const f = path.join(BACKUP_DIR, `hookline-${new Date().toISOString().slice(0, 10)}.json.gz`);
+  if (fs.existsSync(f)) return;
+  zlib.gzip(JSON.stringify(db), (err, buf) => {
+    if (err) return console.error('[accounts] backup failed:', err.message);
+    fs.writeFile(f, buf, e => { if (e) return console.error('[accounts] backup failed:', e.message);
+      const old = fs.readdirSync(BACKUP_DIR).filter(x => x.startsWith('hookline-')).sort().slice(0, -14); for (const o of old) fs.unlink(path.join(BACKUP_DIR, o), () => { }); });
+  });
+}
+setTimeout(backup, 30e3); setInterval(backup, 3600e3);
+// errors players hit, reported by the page (rate limited, small); GET /api/admin/errors lists the latest
+const ERR_FILE = path.join(DATA_DIR, 'client-errors.jsonl'); const recentErrors = [];
 const ledger = row => fs.appendFile(LEDGER_FILE, JSON.stringify({ t: Date.now(), ...row }) + '\n', () => { });
 
 /* ---------- helpers ---------- */
@@ -192,6 +207,17 @@ function marketCancel(acc, a) {
 async function handle(req, res, url) {
   const p = url.pathname, method = req.method;
   try {
+    if (p === '/api/client-error' && method === 'POST') {
+      if (!allow('err:' + clientIp(req), 10, 10 / 60)) return sendJson(res, 429, { ok: false }), true;
+      const b = await readBody(req, 8 * 1024); const row = { t: Date.now(), msg: String(b.msg || '').slice(0, 300), where: String(b.where || '').slice(0, 300), stack: String(b.stack || '').slice(0, 1500), ua: String(req.headers['user-agent'] || '').slice(0, 160), v: String(b.v || '').slice(0, 20) };
+      recentErrors.push(row); if (recentErrors.length > 200) recentErrors.shift(); fs.appendFile(ERR_FILE, JSON.stringify(row) + '\n', () => { });
+      return sendJson(res, 200, { ok: true }), true;
+    }
+    if ((p === '/api/admin/errors' || p === '/api/admin/backup') && method === 'GET') {
+      if (!ADMIN_TOKEN || req.headers['x-admin-token'] !== ADMIN_TOKEN) return sendJson(res, 403, { ok: false, error: 'forbidden' }), true;
+      if (p === '/api/admin/errors') return sendJson(res, 200, { ok: true, errors: recentErrors.slice(-100).reverse() }), true;
+      const buf = zlib.gzipSync(JSON.stringify(db)); res.writeHead(200, { 'content-type': 'application/gzip', 'content-disposition': `attachment; filename="hookline-${new Date().toISOString().slice(0, 10)}.json.gz"`, 'content-length': buf.length }); res.end(buf); return true;
+    }
     // public: how full the Harbor Treasury is
     if (p === '/api/economy' && method === 'GET') return sendJson(res, 200, { ok: true, mode: MODE, treasury: publicTreasury() }), true;
 
@@ -274,4 +300,4 @@ async function handle(req, res, url) {
   }
 }
 
-module.exports = { handle, MODE, stats: () => ({ accounts: Object.keys(db.accounts).length, treasury: publicTreasury().ax }) };
+module.exports = { handle, MODE, stats: () => ({ accounts: Object.keys(db.accounts).length, treasury: publicTreasury().ax, errorsLastHour: recentErrors.filter(e => Date.now() - e.t < 3600e3).length }) };
