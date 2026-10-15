@@ -66,7 +66,7 @@ function allow(key, cap, perSec) {
 }
 
 /* ---------- accounts ---------- */
-const PROFILE_KEYS = ['nick', 'coat', 'lvl', 'xp', 'tut', 'dex', 'quests', 'qday', 'trophies', 'best', 'stop', 'trail', 'tp', 'bait', 'voiceOff', 'strikeTip', 'towTip', 'reelTip', 'tips', 'hintSeen', 'paper', 'usd', 'real', 'onboarded', 'seedPos'];
+const PROFILE_KEYS = ['nick', 'coat', 'lvl', 'xp', 'tut', 'dex', 'quests', 'qday', 'trophies', 'best', 'stop', 'trail', 'tp', 'bait', 'voiceOff', 'strikeTip', 'towTip', 'reelTip', 'tips', 'hintSeen', 'paper', 'usd', 'real', 'onboarded', 'seedPos', 'riskAck', 'gfx'];
 const cleanNick = n => String(n || '').replace(/[^\p{L}\p{N} '._-]/gu, '').trim().slice(0, 18);
 const cleanCoat = c => /^#[0-9a-f]{6}$/i.test(String(c || '')) ? String(c) : null;
 function cleanProfile(p) {

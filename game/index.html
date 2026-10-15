@@ -658,6 +658,11 @@
   }
   .gfx-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 12px; font-weight: 700; }
   .seg { display: flex; background: #06213b; border-radius: 10px; padding: 3px; gap: 2px; } .seg button { border: 0; background: none; color: #b9d6ee; font: 800 12px var(--body, inherit); padding: 6px 9px; border-radius: 8px; cursor: pointer; } .seg button[aria-pressed="true"] { background: #1d5585; color: #fff; }
+  .risk-ack { display: grid; grid-template-columns: auto 1fr; gap: 8px; align-items: start; text-align: left; font-size: 12px; line-height: 1.4; color: #cfe6f7; background: rgba(255,210,63,.08); border: 1.5px solid rgba(255,210,63,.35); border-radius: 12px; padding: 8px 10px; width: 100%; }
+  .risk-ack input { width: 18px; height: 18px; margin-top: 1px; } .risk-ack a, .onb-legal a, .legal-links a { color: #ffd23f; }
+  .onb-legal { display: block; text-align: center; color: #9ab8d3; font-size: 11px; margin-top: 8px; line-height: 1.4; }
+  .legal-links { font-size: 12px; color: #9ab8d3; margin: 0 0 10px; }
+  #real-demo-rib { left: 14px !important; right: auto !important; top: 16px !important; transform: none !important; }
   .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
@@ -770,6 +775,7 @@
       <div class="acct" id="acct"></div>
       <label class="lc-toggle voice-toggle"><input type="checkbox" id="voice-on" checked> 🎙️ Fisherman voice</label>
       <div class="gfx-row"><span>🖥️ Graphics</span><div class="seg" id="gfx"><button type="button" data-gfx="auto">Auto</button><button type="button" data-gfx="high">High</button><button type="button" data-gfx="low">Battery saver</button></div></div>
+      <p class="legal-links"><a href="terms.html" target="_blank" rel="noopener">Terms</a> · <a href="privacy.html" target="_blank" rel="noopener">Privacy</a> · <a href="risk.html" target="_blank" rel="noopener">Risk disclosure</a></p>
       <details class="adv"><summary>Advanced · connect your own Lighter relay</summary>
       <div class="lighter-card" id="lighter-card">
         <div class="lc-head"><b>Lighter connection</b><span class="venue-badge" id="lc-badge"><i></i><span>Paper</span></span></div>
@@ -837,6 +843,7 @@
           <p>Every fish here is a real perp position on Lighter. Sign in to fish with real money, or start as a guest with paper money. You can switch later.</p>
           <button class="big-btn reel" type="button" data-onbgo="login">SIGN IN</button>
           <button class="big-btn ghost" type="button" data-onbgo="guest">PLAY AS GUEST</button>
+          <small class="onb-legal">By playing you agree to the <a href="terms.html" target="_blank" rel="noopener">Terms</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. Real-money fishing is 18+.</small>
         </section>
         <section data-onb="1" hidden>
           <h3>Pick your angler</h3>
@@ -897,6 +904,7 @@
         <h3>Add funds</h3>
         <p id="real-addr">Your wallet is ready.</p>
         <div class="real-amts"><button type="button" data-amt="10">$10</button><button type="button" data-amt="20" aria-pressed="true">$20</button><button type="button" data-amt="50">$50</button><button type="button" data-amt="100">$100</button></div>
+        <label class="risk-ack"><input type="checkbox" id="risk-ack"> <span>I'm 18 or older, allowed to trade perpetual futures where I live, and I understand leveraged trading can lose my whole bait. I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms</a> and <a href="risk.html" target="_blank" rel="noopener">Risk disclosure</a>.</span></label>
         <button class="big-btn kelp" id="real-card" type="button">PAY WITH CARD / APPLE PAY</button>
         <button class="big-btn ghost" id="real-crypto" type="button">I HAVE USDC</button>
         <div class="real-progress" id="real-progress" hidden><div class="lbar"><i id="real-pi"></i></div><span id="real-pt">Depositing to Lighter…</span></div>
@@ -1304,7 +1312,7 @@
   const HAD_SAVE = (() => { try { return !!localStorage.getItem('hookline-lighter-v1'); } catch (_) { return false; } })();
   const ACC = { token: null, id: null, kind: 'local', online: false, treasury: null, mode: 'demo', pending: 0, chain: Promise.resolve() };
   const TOKEN_KEY = 'hookline-session-v1';
-  const PROFILE_KEYS = ['nick', 'coat', 'lvl', 'xp', 'tut', 'dex', 'quests', 'qday', 'trophies', 'best', 'stop', 'trail', 'tp', 'bait', 'voiceOff', 'strikeTip', 'towTip', 'reelTip', 'tips', 'hintSeen', 'paper', 'usd', 'real', 'onboarded', 'seedPos'];
+  const PROFILE_KEYS = ['nick', 'coat', 'lvl', 'xp', 'tut', 'dex', 'quests', 'qday', 'trophies', 'best', 'stop', 'trail', 'tp', 'bait', 'voiceOff', 'strikeTip', 'towTip', 'reelTip', 'tips', 'hintSeen', 'paper', 'usd', 'real', 'onboarded', 'seedPos', 'riskAck', 'gfx'];
   const profileOf = () => { const o = {}; for (const k of PROFILE_KEYS) if (SAVE[k] !== undefined) o[k] = SAVE[k]; return o; };
   const econOf = () => { const e = HL_ECON.pick(SAVE); for (const k in e.charges || {}) if (e.charges[k] === Infinity || e.charges[k] === null) e.charges[k] = -1; return e; };
   function fixCharges() { for (const k in SAVE.charges || {}) if (SAVE.charges[k] === -1 || SAVE.charges[k] === null) SAVE.charges[k] = Infinity; }
@@ -3560,7 +3568,7 @@
   let realAmt = 20;
   const realApi = () => window.HookLineReal || null;
   function realStep(n) {
-    $$('#o-real section').forEach(sec => { sec.hidden = +sec.dataset.step !== n; });
+    $$('#o-real section').forEach(sec => { sec.hidden = +sec.dataset.step !== n; }); riskGate();
     $$('.real-steps i').forEach(i => { const k = +i.dataset.st; i.className = k === n ? 'on' : k < n ? 'done' : ''; });
     $('#real-err').hidden = true;
   }
@@ -3579,8 +3587,10 @@
     if (!$('#real-on').checked) $('#real-on').checked = !!SAVE.real; $('#real-open-t').textContent = st.signedIn ? (st.balance > 0 ? `${fmtUSD(st.balance)} on Lighter` : 'add funds') : 'sign in & add funds';
   }
   async function realLogin() { const api = realApi(); if (!api) return; try { await api.login(); await linkPrivy(); const st = await api.status(); renderReal(st); realStep(st.balance > 0 ? 2 : 1); } catch (e) { realErr(e.message || 'Sign-in was cancelled.'); } }
+  function riskGate() { const ok = !!SAVE.riskAck; $('#risk-ack').checked = ok; $('#real-card').disabled = !ok; $('#real-crypto').disabled = !ok; }
+  $('#risk-ack').addEventListener('change', e => { SAVE.riskAck = e.target.checked ? Date.now() : 0; persist(); riskGate(); });
   async function realFund(method) {
-    const api = realApi(); if (!api) return; const pr = $('#real-progress'); pr.hidden = false; $('#real-pi').style.width = '10%';
+    const api = realApi(); if (!api) return; if (!SAVE.riskAck) { realErr('Tick the box above to confirm you\'re 18+ and understand the risk.'); return; } const pr = $('#real-progress'); pr.hidden = false; $('#real-pi').style.width = '10%';
     try {
       const r = await api.fund(realAmt, method, (k, msg) => { $('#real-pi').style.width = Math.round(k * 100) + '%'; if (msg) $('#real-pt').textContent = msg; });
       $('#real-pt').textContent = 'Turning on trading (one automatic signature)…'; await api.enableTrading();
