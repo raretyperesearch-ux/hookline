@@ -1585,9 +1585,10 @@
       float sw = 0.5 + vH*2.4;
       vec3 col = mix(uDeep, uMid, clamp(sw, 0.0, 1.0)*0.75 + 0.15);
       col += vec3(0.1, 0.55, 0.5)*pow(clamp(vH*3.2, 0.0, 1.0), 2.0)*0.35;          // sunlight through the crests
+      col *= 0.8 + 0.34*clamp(dot(vN, normalize(uSun))*1.6 - 0.35, 0.0, 1.0);        // slopes facing the sun lift, the far sides sink: the swell reads
       vec2 wd = normalize(vec2(1.0, 0.35)); float streak = vn(vec2(dot(p, wd)*0.35 - t*0.4, dot(p, vec2(-wd.y, wd.x))*3.0));
-      col += vec3(0.9)*smoothstep(0.8, 0.95, streak)*0.035;                           // wind lines
-      col = mix(col, uShallow, shallow*0.85);
+      col += vec3(0.9)*smoothstep(0.86, 0.97, streak)*0.018;                          // wind lines (faint)
+      col = mix(col, uShallow, shallow*0.7);
       // light caustics in the shallows and inside fishing zones
       float ca = caustic(p*0.075, t*0.45);
       // zones: tinted water, a bright dashed rim, ripples pulsing outward
@@ -1597,22 +1598,24 @@
         float ang = atan(dz.y, dz.x); float dash = smoothstep(0.35, 0.5, abs(fract(ang/6.28318*40.0 + t*0.08) - 0.5));
         float rim = exp(-pow((d - z.z)/0.32, 2.0))*(0.45 + 0.55*dash);
         float pulse = smoothstep(0.0, 0.04, fract(d*0.09 - t*0.35))*smoothstep(0.12, 0.04, fract(d*0.09 - t*0.35))*inside;
-        zadd += uZnCol[i]*(rim*2.0*act + pulse*0.4*act + inside*0.05 + inside*ca*0.28*act);
+        zadd += uZnCol[i]*(rim*2.0*act + pulse*0.4*act + inside*0.05 + inside*ca*0.07*act);
         zin = max(zin, inside); }
-      col += ca*(shallow*0.55 + 0.06);
+      col += ca*(shallow*0.28 + 0.03);
       // cloud shadows drifting across the sea
       float cl = smoothstep(0.48, 0.74, fbm(p*0.016 + vec2(t*0.012, t*0.007)));
       col *= 1.0 - cl*0.24;
       // sky reflection + sun
       float fres = 0.04 + 0.96*pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 5.0);
       col = mix(col, uSky, clamp(fres*1.3, 0.0, 0.35));
-      float nh = max(dot(N, Hh), 0.0); float spec = pow(nh, 900.0)*30.0 + pow(nh, 80.0)*0.12;
-      float glint = smoothstep(0.93, 0.99, vn(p*7.0 + vec2(t*1.3, -t*0.9)))*pow(nh, 40.0)*5.0;
+      float nh = max(dot(N, Hh), 0.0); float spec = pow(nh, 1400.0)*16.0 + pow(nh, 90.0)*0.1;
+      float glint = smoothstep(0.95, 0.995, vn(p*7.0 + vec2(t*1.3, -t*0.9)))*pow(nh, 50.0)*2.6;
       col += vec3(1.0, 0.95, 0.85)*(spec + glint)*(1.0 - cl*0.85)*(1.0 - uDark*0.9);
       // whitecaps on the crests, foam at the shore
-      float cap = smoothstep(0.24, 0.34, vH)*smoothstep(0.62, 0.8, vn(p*2.2 + t*0.6));
+      float cap = smoothstep(0.26, 0.36, vH)*smoothstep(0.66, 0.82, vn(p*2.2 + t*0.6))*0.8;
       float foamN = vn(p*4.0 + t*0.8)*0.6 + vn(p*9.0 - t)*0.4;
       float foam = max(cap*0.7, max(shore, lap*0.8)*smoothstep(0.3, 0.6, foamN));
+      { float bd = length((p - uBoat.xy)*vec2(1.0, 1.0)); col *= 1.0 - 0.28*exp(-bd*bd*0.32);
+        foam = max(foam, smoothstep(2.3, 1.7, bd)*smoothstep(1.1, 1.6, bd)*smoothstep(0.35, 0.65, foamN)*0.55); }
       col = mix(col, vec3(1.08, 1.12, 1.15), clamp(foam, 0.0, 1.0));
       col += zadd;
       // the kraken's whirlpool: dark core, spiral foam, sick purple glow
@@ -1642,7 +1645,7 @@
       vec3 col = mix(deep, sand, shallow);
       for (int i = 0; i < ${MAX_ZN}; i++){ vec4 z = uZn[i]; if (z.z <= 0.0) continue; float d = length(p - z.xy); float inside = 1.0 - smoothstep(z.z - 3.0, z.z, d);
         float coral = smoothstep(0.62, 0.72, vn(p*0.7 + float(i)*13.0)); col = mix(col, mix(vec3(0.95, 0.45, 0.5), uZnCol[i], 0.45), coral*inside*0.75); col = mix(col, vec3(0.25, 0.6, 0.45), smoothstep(0.7, 0.8, vn(p*1.3 + 7.0))*inside*0.5); }
-      col += vec3(0.9, 1.0, 1.0)*caustic(p*0.09, uTime*0.5)*(0.18 + shallow*0.7);
+      col += vec3(0.9, 1.0, 1.0)*caustic(p*0.09, uTime*0.5)*(0.07 + shallow*0.35);
       float d = length(uCam.xz - vW.xz); col = mix(col, uFog, smoothstep(80.0, 190.0, d));
       gl_FragColor = vec4(col, 1.0); }`;
   function syncWaterLayout() {
@@ -1825,7 +1828,7 @@
     if (!composer) { renderer.render(scene, camera); return; }
     const u = gradePass.uniforms;
     u.uTime.value = S.time; u.uRed.value = GRADE.red; u.uFlash.value = GRADE.flash; u.uFlashCol.value.copy(GRADE.flashCol); u.uAb.value = GRADE.ab; u.uDark.value = GRADE.dark;
-    bloomPass.strength = 0.6 + GRADE.bloomKick * 1.2 + GRADE.dark * 0.4;
+    bloomPass.strength = 0.42 + GRADE.bloomKick * 1.2 + GRADE.dark * 0.4;
     composer.render(dt);
   }
   function flashScreen(color, amt, ab = 0) { if (reduceMotion) amt *= 0.4; GRADE.flashCol.set(color); GRADE.flash = Math.max(GRADE.flash, amt); GRADE.ab = Math.max(GRADE.ab, ab); }
@@ -2071,7 +2074,7 @@
   function renderRound() {
     const me = LB.pill && LB.pill.me, fz = frenzyNow(), r = frenzySlot();
     $('#rb-me').textContent = me && me.rank ? `#${me.rank}` : '';
-    $('#rb-time').textContent = me && me.rank ? lbVal('haul', me.v) : 'Today';
+    $('#rb-time').textContent = me && me.rank ? lbVal('haul', me.v) : '';
     const rl = $('#rb-list'); rl.innerHTML = LB.pill && LB.pill.top.length ? LB.pill.top.slice(0, 3).map(x => `<li class="${x.me ? 'me' : ''}"><span>${x.rank}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.crown ? '👑 ' : ''}${esc(x.nick)}</span><b class="up">${lbVal('haul', x.v)}</b></li>`).join('') : '<li><span></span><span>Land a green fish to get on today\'s board</span><b></b></li>';
     const fe = $('#rb-fz'); fe.hidden = false; fe.style.opacity = fz ? 1 : 0.7;
     fe.textContent = fz ? `FRENZY: ${fz.name} · ${mmss(FRENZY_LEN - r.el)}` : `Next frenzy: ${frenzyFor(r.id + 1).name} in ${mmss(FRENZY_SLOT - r.el)}`;
@@ -2159,9 +2162,10 @@
     const w = S.wpMesh; if (!w) return; const z = S.waypoint;
     if (!z || S.showcase) { w.visible = false; return; }
     const ang = Math.atan2(z.z - ME.z, z.x - ME.x), d = Math.hypot(z.x - ME.x, z.z - ME.z);
-    w.visible = true; w.position.set(ME.x + Math.cos(ang) * 5.2, 0.6 + Math.sin(S.time * 4) * 0.12, ME.z + Math.sin(ang) * 5.2);
-    w.rotation.y = -ang - Math.PI / 2; w.children[0].material.opacity = 0.65 + Math.sin(S.time * 5) * 0.25; w.scale.setScalar(1.2 + Math.min(1, d / 80) * 0.6);
-    w.children[0].material.color.set(z === S.frenzyZone ? '#ffd23f' : '#ffe9a6').multiplyScalar(2.2);
+    const slide = (S.time * 0.9) % 1;   // the arrow drifts out toward the goal and fades, like a current
+    w.visible = true; w.position.set(ME.x + Math.cos(ang) * (4.6 + slide * 2.2), 0.35, ME.z + Math.sin(ang) * (4.6 + slide * 2.2));
+    w.rotation.y = -ang - Math.PI / 2; w.children[0].material.opacity = 0.55 * Math.sin(slide * Math.PI); w.scale.setScalar(0.75 + Math.min(1, d / 80) * 0.25);
+    w.children[0].material.color.set(z === S.frenzyZone ? '#ffd23f' : S.whale && z === S.whale.zone ? '#7fe8ff' : '#fff4c8').multiplyScalar(1.6);
   }
 
   /* ================= schools of little fish under the surface ================= */
