@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const ECON = require('../game/economy.js');
+const LV = require('./lighter-verify.js');
 
 const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, '..', 'data'));
 const DB_FILE = path.join(DATA_DIR, 'hookline.json');
@@ -24,6 +25,7 @@ try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (_) { db = null
 if (!db || !db.accounts) db = { v: 1, accounts: {}, sessions: {}, privy: {}, treasury: null };
 if (!db.market) db.market = { listings: [], sales: [] };
 if (!db.analytics) db.analytics = { days: {} };
+if (!db.wallets) db.wallets = {};   // wallet address -> account id (one HookLine account per wallet)
 if (!db.treasury) db.treasury = { ax: +process.env.TREASURY_AX || 50000, in: 0, out: 0 };
 let saveT = null, writing = false, again = false;
 // write the whole file at most every 1.5s, off the request path; a write in flight queues one more
@@ -124,7 +126,7 @@ function authed(req) {
   return acc;
 }
 // what the browser gets back: knife charges use -1 for "never dulls" (JSON has no Infinity)
-const view = acc => ({ id: acc.id, kind: acc.kind, nick: acc.nick || acc.profile.nick || '', coat: acc.coat || acc.profile.coat || null, email: acc.email || null, econ: ECON.pick(ECON.normalize(acc.econ)), profile: acc.profile, mode: MODE });
+const view = acc => ({ wallet: acc.wallet || null, lighter: acc.lighter || [], id: acc.id, kind: acc.kind, nick: acc.nick || acc.profile.nick || '', coat: acc.coat || acc.profile.coat || null, email: acc.email || null, econ: ECON.pick(ECON.normalize(acc.econ)), profile: acc.profile, mode: MODE });
 const publicTreasury = () => ({ ax: Math.floor(db.treasury.ax), in: Math.floor(db.treasury.in), out: Math.floor(db.treasury.out), buyback: ECON.DAILY_BUYBACK });
 
 /* ---------- Privy: verify the access token the browser got at sign-in ---------- */
@@ -334,6 +336,45 @@ async function handle(req, res, url) {
         save();
       }
       return sendJson(res, 200, { ok: r.ok, error: r.err, out: r.out, econ: ECON.pick(acc.econ), treasury: publicTreasury() }), true;
+    }
+
+    // link the player's wallet: sign a one-time message, we recover the address and find their Lighter accounts
+    if (p === '/api/wallet/nonce' && method === 'POST') {
+      const nonce = crypto.randomBytes(12).toString('hex'); acc.walletNonce = { n: nonce, t: Date.now() }; save();
+      return sendJson(res, 200, { ok: true, message: `HookLine: link this wallet to my game account ${acc.id}.\nNonce: ${nonce}` }), true;
+    }
+    if (p === '/api/wallet/link' && method === 'POST') {
+      const b = await readBody(req), wn = acc.walletNonce;
+      if (!wn || Date.now() - wn.t > 10 * 60e3) return sendJson(res, 400, { ok: false, error: 'link request expired, try again' }), true;
+      let addr; try { addr = LV.recoverAddress(`HookLine: link this wallet to my game account ${acc.id}.\nNonce: ${wn.n}`, b.signature).toLowerCase(); } catch (_) { return sendJson(res, 400, { ok: false, error: 'signature could not be checked' }), true; }
+      if (!/^0x[0-9a-fA-F]{40}$/.test(String(b.address || '')) || String(b.address).toLowerCase() !== addr) return sendJson(res, 400, { ok: false, error: 'signature does not match this wallet' }), true;
+      if (db.wallets[addr] && db.wallets[addr] !== acc.id) return sendJson(res, 409, { ok: false, error: 'this wallet is already linked to another HookLine account' }), true;
+      let idx = []; try { idx = await LV.lighterAccounts(addr); } catch (e) { return sendJson(res, 502, { ok: false, error: 'Lighter did not answer, try again' }), true; }
+      if (acc.wallet && acc.wallet !== addr) delete db.wallets[acc.wallet];
+      acc.wallet = addr; acc.lighter = idx; acc.walletNonce = null; db.wallets[addr] = acc.id; save(); ledger({ acc: acc.id, a: 'wallet', addr, lighter: idx });
+      return sendJson(res, 200, { ok: true, wallet: addr, lighter: idx }), true;
+    }
+    // a real fish closed: rebuild it from the player's Lighter fills and pay out on Lighter's numbers
+    if (p === '/api/catch/real' && method === 'POST') {
+      if (!allow('real:' + acc.id, 10, 0.5)) return sendJson(res, 429, { ok: false, error: 'slow down' }), true;
+      const b = await readBody(req), mk = String(b.mk || ''), side = b.side > 0 ? 1 : -1;
+      if (!(mk in ECON.RARITY)) return sendJson(res, 400, { ok: false, error: 'unknown market' }), true;
+      if (!acc.wallet) return sendJson(res, 409, { ok: false, error: 'link your wallet first' }), true;
+      if (!acc.lighter || !acc.lighter.length) { try { acc.lighter = await LV.lighterAccounts(acc.wallet); } catch (_) { } }
+      if (!acc.lighter || !acc.lighter.length) return sendJson(res, 409, { ok: false, error: 'no Lighter account for your wallet yet' }), true;
+      const used = new Set(acc.usedTrades || []);
+      let v = null;
+      for (let i = 0; i < 4; i++) {   // Lighter's trade history can lag a few seconds behind the fill
+        try { v = await LV.verifyCatch({ indexes: acc.lighter, market: mk, side, openAt: +b.openAt, closeAt: +b.closeAt, used }); } catch (e) { v = { ok: false, reason: e.message }; }
+        if (v.ok) break; await new Promise(r => setTimeout(r, 2500));
+      }
+      if (!v.ok) return sendJson(res, 202, { ok: false, pending: true, error: v.reason || 'not on Lighter yet' }), true;
+      acc.usedTrades = [...(acc.usedTrades || []), ...v.tradeIds].slice(-3000);
+      const lev = Math.max(1, Math.min(+b.lev || 1, 50)), margin = v.notional / lev, pct = margin > 0 ? v.pnl / margin : 0;
+      const r = ECON.apply(acc.econ, 'catch', { mk, side, lev, margin, pct, usd: v.pnl, shiny: !!b.shiny, bait: b.bait || null, real: true, verified: true }, { now: Date.now(), lvl: acc.profile.lvl || 1, live: MODE === 'live', id: () => newId('f') });
+      if (r.ok) { acc.verifiedCatches = (acc.verifiedCatches || 0) + 1; track(acc, 'verified_catch'); }
+      save(); ledger({ acc: acc.id, a: 'realcatch', mk, side, pnl: +v.pnl.toFixed(4), notional: +v.notional.toFixed(2), trades: v.tradeIds, ok: r.ok });
+      return sendJson(res, 200, { ok: r.ok, error: r.err, out: r.out, verified: { pnl: v.pnl, notional: v.notional, pct }, econ: ECON.pick(acc.econ), treasury: publicTreasury() }), true;
     }
 
     // player market

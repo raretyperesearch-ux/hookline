@@ -86,14 +86,18 @@ to `ledger.jsonl`.
 | `POST /api/econ` | `{action, args}`: buy, equip, sonar, lures, sharpen, knifeUse, catch, sell, sellAll, craft, buyBait, setBait, useBait, claimQuest, levelReward, treasure |
 | `POST /api/auth/privy` | link / switch to the Privy account |
 | `GET /api/economy` | public treasury numbers |
+| `POST /api/wallet/nonce`, `/api/wallet/link` | prove wallet ownership (EIP-191 signature) and find the player's Lighter accounts |
+| `POST /api/catch/real` | a real fish closed: rebuilt from the player's Lighter fills (`/api/v1/trades`), paid on Lighter's realized PnL; each trade id counts once |
+| `POST /api/events` | analytics events (whitelisted names), aggregated per day, milestones per account |
+| `GET /api/admin/stats` · `/admin.html` | ops dashboard: DAU, funnel, retention, economy, crashes (header `x-admin-token`) |
 | `POST /api/admin/treasury` | top the treasury up from fee income: `{add, note}`, header `x-admin-token` |
 
 Service variables (game service): `DATA_DIR=/data` (Railway volume `hookline-data`), `ECONOMY_MODE`
 (`demo` now; `live` = only verified Lighter trades land sellable fish), `TREASURY_AX` (starting pool),
 `ADMIN_TOKEN`, `PRIVY_APP_ID` (+ optional `PRIVY_CLIENT_ID`, `PRIVY_VERIFICATION_KEY`).
 
-Before `ECONOMY_MODE=live`: verify real catches against the player's Lighter trade history on the
-server (the `verified` flag on `catch`), so only real trades mint sellable fish.
+Real catches are verified on the server against the player's Lighter fills (server/lighter-verify.js), so
+`ECONOMY_MODE=live` can be switched on once Privy is live: then only verified real trades mint sellable fish.
 
 ## Play for real (Privy + Lighter, in the browser)
 

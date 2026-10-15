@@ -1333,7 +1333,7 @@
   }
   function applyEcon(e) { if (!e) return; for (const k of HL_ECON.KEYS) if (e[k] !== undefined) SAVE[k] = e[k]; fixCharges(); try { localStorage.setItem('hookline-lighter-v1', JSON.stringify(SAVE)); } catch (_) { } }
   function applyAccount(a, fresh) {
-    if (!a) return; ACC.id = a.id; ACC.kind = a.kind; ACC.mode = a.mode || 'demo'; ACC.email = a.email || null;
+    if (!a) return; ACC.id = a.id; ACC.kind = a.kind; ACC.wallet = a.wallet || null; ACC.lighter = a.lighter || []; ACC.mode = a.mode || 'demo'; ACC.email = a.email || null;
     applyEcon(a.econ);
     const pr = a.profile || {};
     // the server's profile wins unless this device is further along (an offline session)
@@ -1379,6 +1379,35 @@
   }
   let profT = null;
   function syncProfile() { if (!ACC.online || !ACC.token) return; clearTimeout(profT); profT = setTimeout(() => api('/api/profile', { profile: profileOf() }, 'PUT').catch(() => { }), 1500); }
+  // real fish are paid on Lighter's numbers: the server rebuilds the trade from your fills (pending ones retry for an hour)
+  async function realCatch(c, quiet) {
+    if (!ACC.online || !ACC.token) { (SAVE.pendingCatches = SAVE.pendingCatches || []).push({ ...c, at: Date.now() }); persist(); return; }
+    if (!ACC.wallet) await linkWallet();
+    if (!quiet) setTimeout(() => toast('🔎 Checking your catch on Lighter…'), 1600);
+    const r = await api('/api/catch/real', c).catch(() => ({ ok: false, pending: true }));
+    if (r.econ) { applyEcon(r.econ); renderAll(); if (S.tab === 'market') renderMarket(); }
+    if (r.ok && r.out && r.out.fish) { const mk = MARKETS[c.mk]; toast(`✅ Verified on Lighter: ${mk ? mk.name : c.mk} (${r.out.fish.kg} kg) is in your cooler · worth ${r.out.value} AX`, 'good'); $('#mk-dot').hidden = false; }
+    else if (r.ok && r.out && r.out.scrap) toast('✅ Verified on Lighter. That one was a loss: +1 scrap for the Bait Shack.');
+    else if (r.pending) { const q = SAVE.pendingCatches = SAVE.pendingCatches || []; if (!q.some(x => x.openAt === c.openAt && x.mk === c.mk)) q.push({ ...c, at: c.at || Date.now() }); persist(); if (!quiet) toast('Lighter is still recording that trade. Your fish will land in the cooler shortly.'); }
+    else if (r.error && !quiet) toast(r.error[0].toUpperCase() + r.error.slice(1) + '.', 'warn');
+    return r;
+  }
+  setInterval(async () => {   // retry catches Lighter hadn't recorded yet
+    const q = SAVE.pendingCatches; if (!q || !q.length || !ACC.online) return;
+    const c = q[0]; if (Date.now() - c.at > 3600e3) { q.shift(); persist(); return; }
+    q.shift(); persist(); const r = await realCatch(c, true); if (r && r.ok) return;
+  }, 45000);
+  // prove you own your wallet (one silent signature with the embedded wallet), so real trades can be checked
+  async function linkWallet() {
+    const auth = window.HookLineAuth; if (!ACC.online || !auth || !auth.signMessage || !auth.getWallet || !auth.getWallet()) return null;
+    try {
+      const n = await api('/api/wallet/nonce', {}); if (!n.ok) return null;
+      const signature = await auth.signMessage(n.message);
+      const r = await api('/api/wallet/link', { address: auth.getWallet().address, signature });
+      if (r.ok) { ACC.wallet = r.wallet; ACC.lighter = r.lighter; } else if (r.error) toast(r.error[0].toUpperCase() + r.error.slice(1) + '.', 'warn');
+      return r;
+    } catch (_) { return null; }
+  }
   // signing in with Privy: hand the server Privy's access token; a returning player gets their account back
   async function linkPrivy() {
     const auth = window.HookLineAuth; if (!ACC.online || !auth || !auth.getAccessToken) return null;
@@ -1387,7 +1416,7 @@
     const r = await api('/api/auth/privy', { token: tok, email: u && u.email });
     if (!r.ok) { toast(r.error || 'Could not link your sign-in.', 'warn'); return null; }
     if (r.token) { ACC.token = r.token; try { localStorage.setItem(TOKEN_KEY, r.token); } catch (_) { } }
-    track('signin'); applyAccount(r.account, !!r.switched); ACC.treasury = r.treasury || ACC.treasury; renderAll();
+    track('signin'); applyAccount(r.account, !!r.switched); if (!ACC.wallet) linkWallet(); ACC.treasury = r.treasury || ACC.treasury; renderAll();
     return r;
   }
   const xpFor = l => Math.round(120 * Math.pow(l, 1.45));
@@ -2583,7 +2612,7 @@
     if (practice) SAVE.paper -= SAVE.bait; else if (!real) SAVE.usd -= SAVE.bait;
     await venue.updateLeverage(spec.market, lev);
     let pos; try { pos = await venue.openPosition({ market: spec.market, side: spec.side, marginUsd: SAVE.bait, leverage: lev, practice, real }); } catch (e) { toast('Lighter said no: ' + e.message, 'warn'); if (!real) SAVE.usd += SAVE.bait; return null; }
-    const k = knife(), meta = { bait: spec.bait || null, shiny: spec.shiny, knife: k.id, kind: k.kind, stop: knifeStopFor(), trail: SAVE.trail, halved: false, lake: zone ? zone.name : '' };
+    const k = knife(), meta = { openedAt: Date.now(), bait: spec.bait || null, shiny: spec.shiny, knife: k.id, kind: k.kind, stop: knifeStopFor(), trail: SAVE.trail, halved: false, lake: zone ? zone.name : '' };
     S.meta[pos.id] = meta;
     if (pos.real) setTimeout(refreshRealBal, 300);
     await armKnife(pos, meta);
@@ -2638,7 +2667,8 @@
       say('cut', true); snip(m.knife || 'knife1'); S.lastEv = { k: 'cut', mk: p.market, t: Date.now() };
       if (res.reason === 'stop') econ('knifeUse', { id: m.knife });
       if (pct > -0.2 && pct < 0) quest('cut', 1);
-      if (!p.practice && res.fraction >= 1) { econ('catch', { mk: p.market, pct: -1 }); setTimeout(() => toast('+1 scrap for the Bait Shack. 3 scraps make a Lucky Worm.'), 1200); }
+      if (p.real && res.fraction >= 1) realCatch({ mk: p.market, side: p.side, lev: p.leverage, openAt: m.openedAt, closeAt: Date.now(), shiny: !!m.shiny, bait: m.bait || null });
+      else if (!p.practice && res.fraction >= 1) { econ('catch', { mk: p.market, pct: -1 }); setTimeout(() => toast('+1 scrap for the Bait Shack. 3 scraps make a Lucky Worm.'), 1200); }
       if (res.fraction < 1) { m.halved = true; m.stop -= 0.15; const live = venue.positions.get(p.id); if (live) armKnife(live, m); }
       pop(mk.fish, res.fraction < 1 ? 'Half the line cut' : 'Line cut', `${p.market} ${fmtSigned(res.pnl)} (${fmtPct(pct)}) · ${fmtUSD(res.returned)} back`, 'lose');
       addXp(pct > -0.2 ? 15 : 5);
@@ -2652,7 +2682,8 @@
       const title = res.reason === 'take-profit' ? 'NETTED!' : res.reason === 'pulled' ? 'Pulled in!' : win ? 'Released a winner' : 'Released';
       pop(mk.fish, title, `${p.market} ${fmtSigned(res.pnl)} (${fmtPct(pct)}) · ${fmtUSD(res.returned)} back`, win ? 'win' : 'lose');
       addXp((win ? 20 + Math.round(Math.min(pct, 3) * 40) : 5) * (win && m.bait === 'grub' ? 2 : 1));
-      if (win && !p.practice) {
+      if (win && p.real) realCatch({ mk: p.market, side: p.side, lev: p.leverage, openAt: m.openedAt, closeAt: Date.now(), shiny: !!m.shiny, bait: m.bait || null });
+      else if (win && !p.practice) {
         const r = econ('catch', { mk: p.market, side: p.side, lev: p.leverage, margin: p.margin * res.fraction, pct, usd: +res.pnl.toFixed(2), shiny: !!m.shiny, bait: m.bait || null, real: !!p.real });
         if (r.ok && r.out.fish) { const item = r.out.fish; setTimeout(() => toast(`${mk.name} (${item.kg} kg) is in your cooler · worth ${r.out.value} AX at the Market`, 'good'), 1800); $('#mk-dot').hidden = false; }
       }

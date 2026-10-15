@@ -10,6 +10,8 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@noble/curves": "^1.9.7",
+    "@noble/hashes": "^1.8.0",
     "jose": "^5.10.0",
     "ws": "^8.18.0"
   }
