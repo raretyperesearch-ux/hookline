@@ -3089,7 +3089,7 @@
     if (!S.watch && S.fishObj && S.mode === 'fight') { const fp = S.fishObj.position; look.x = lerp(look.x, fp.x, 0.35); look.z = lerp(look.z, fp.z, 0.35); extra += clamp(Math.hypot(fp.x - ME.x, fp.z - ME.z) - 7, 0, 10) * 0.45; }
     const zoom = clamp(0.56 / Math.max(0.3, camera.aspect), 0.92, 1.12);   // tall phones used to zoom out to 1.35×: the boat got lost
     S.fightCam = lerp(S.fightCam || 0, !S.watch && (S.mode === 'fight' || S.mode === 'pull' || S.mode === 'kraken') ? 1 : 0, Math.min(1, dt * 1.6));
-    const tall = camera.aspect < 0.8, fc = reduceMotion ? 0 : S.fightCam, hgt = lerp(tall ? 13 : 19, 10.5, fc), back = lerp(tall ? 12.5 : 14, 15.5, fc);   // phones: sit lower so the boat reads
+    const tall = camera.aspect < 0.8, fc = reduceMotion ? 0 : S.fightCam, hgt = lerp(tall ? 15.5 : 19, tall ? 12 : 10.5, fc), back = lerp(tall ? 14 : 14, tall ? 16.5 : 15.5, fc);   // phones: a touch wider than before so you can see what is around you
     { const sh = (S.sheetH || 300) / Math.max(1, H); look.z += clamp(sh - 0.3, 0, 0.4) * 20 * zoom; }   // keep the boat above the bottom panel
     const want = new THREE.Vector3(look.x, (hgt + extra) * zoom, look.z + (back + extra * 0.7) * zoom);
     look.y = fc * 1.2;
