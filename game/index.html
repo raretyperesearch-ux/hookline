@@ -656,6 +656,8 @@
     .tabbar { height: 56px; } .tab img { width: 26px !important; height: 26px !important; } .tab { font-size: 10.5px; }
     .sheet { bottom: 56px; }
   }
+  .gfx-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 12px; font-weight: 700; }
+  .seg { display: flex; background: #06213b; border-radius: 10px; padding: 3px; gap: 2px; } .seg button { border: 0; background: none; color: #b9d6ee; font: 800 12px var(--body, inherit); padding: 6px 9px; border-radius: 8px; cursor: pointer; } .seg button[aria-pressed="true"] { background: #1d5585; color: #fff; }
   .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
@@ -767,6 +769,7 @@
       <p class="sub">Everything here is bought with AX. Gear changes how you fish, not the market.</p>
       <div class="acct" id="acct"></div>
       <label class="lc-toggle voice-toggle"><input type="checkbox" id="voice-on" checked> 🎙️ Fisherman voice</label>
+      <div class="gfx-row"><span>🖥️ Graphics</span><div class="seg" id="gfx"><button type="button" data-gfx="auto">Auto</button><button type="button" data-gfx="high">High</button><button type="button" data-gfx="low">Battery saver</button></div></div>
       <details class="adv"><summary>Advanced · connect your own Lighter relay</summary>
       <div class="lighter-card" id="lighter-card">
         <div class="lc-head"><b>Lighter connection</b><span class="venue-badge" id="lc-badge"><i></i><span>Paper</span></span></div>
@@ -1420,7 +1423,7 @@
   const camera = has3D ? new THREE.PerspectiveCamera(50, 1, 0.5, 900) : null;
   let W = 0, H = 0;
   if (has3D) {
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1) * ((navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3 ? 0.65 : 1));
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1777,7 +1780,7 @@
   }
   const PS = { glow: null, water: null };
   function emit(sys, n, f) {
-    if (!sys) return;
+    if (!sys) return; if (Q.tier >= 2) { n = Math.floor(n / 2 + Math.random() * 0.5 * (n % 2)); if (!n) return; }
     for (let i = 0; i < n; i++) { if (sys.list.length >= sys.max) sys.list.splice(0, 1); sys.list.push(Object.assign({ t: 0, life: 1, grav: 0, drag: 0, kind: 0, floor: false, s0: 0.3, s1: 0.3, r: 1, g: 1, b: 1, a: 1, fade: 1, vx: 0, vy: 0, vz: 0 }, f(i))); }
   }
   function updateParticles(sys, dt) {
@@ -3132,13 +3135,30 @@
   }
 
   // adaptive quality: if frames run slow, render fewer pixels (and back up when there is headroom)
-  const Q = { frames: 0, t: 0, pr: Math.min(2, window.devicePixelRatio || 1), max: Math.min(2, window.devicePixelRatio || 1) };
+  // tiers: 0 everything · 1 no shadows · 2 also no bloom and half the particles. Weak phones start lower;
+  // Gear > Graphics can pin High or Battery saver.
+  const weakDevice = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 3;
+  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  const Q = { frames: 0, t: 0, pr: weakDevice ? Math.min(DPR, 1.25) : DPR, max: DPR, tier: 0, slow: 0 };
+  function applyTier() {
+    if (S.sun) S.sun.castShadow = Q.tier < 1;
+    if (bloomPass) bloomPass.enabled = Q.tier < 2;
+  }
+  function setGraphics(mode) {   // 'auto' | 'high' | 'low'
+    SAVE.gfx = mode; persist();
+    if (mode === 'low') { Q.tier = 2; Q.pr = Math.min(DPR, 1); } else if (mode === 'high') { Q.tier = 0; Q.pr = DPR; } else { Q.tier = 0; Q.pr = weakDevice ? Math.min(DPR, 1.25) : DPR; }
+    if (renderer) { renderer.setPixelRatio(Q.pr); resize(); } applyTier();
+  }
   function adaptQuality(dt) {
     Q.frames++; Q.t += dt; if (Q.t < 2.5) return;
-    const fps = Q.frames / Q.t; Q.frames = 0; Q.t = 0; let pr = Q.pr;
-    if (fps < 42 && pr > 0.75) pr = Math.max(0.75, pr - 0.25); else if (fps > 57 && pr < Q.max) pr = Math.min(Q.max, pr + 0.25);
+    const fps = Q.frames / Q.t; Q.frames = 0; Q.t = 0; S.fps = Math.round(fps);
+    if (SAVE.gfx === 'high' || SAVE.gfx === 'low') return;
+    let pr = Q.pr;
+    if (fps < 42 && pr > 0.75) pr = Math.max(0.75, pr - 0.25);
+    else if (fps < 40 && Q.tier < 2 && ++Q.slow >= 2) { Q.tier++; Q.slow = 0; applyTier(); }   // already at the lowest resolution: drop effects
+    else if (fps > 57 && pr < Q.max) pr = Math.min(Q.max, pr + 0.25);
+    if (fps >= 40) Q.slow = 0;
     if (pr !== Q.pr) { Q.pr = pr; renderer.setPixelRatio(pr); resize(); }
-    S.fps = Math.round(fps);
   }
   let last = performance.now(), presT = 0;
   function frame(now) {
@@ -3828,6 +3848,9 @@
   $('#kr-close').addEventListener('click', () => { $('#o-kraken').hidden = true; });
   $('#help').addEventListener('click', () => { $('#o-howto').hidden = false; });
   $('#ht-close').addEventListener('click', () => { $('#o-howto').hidden = true; });
+  const markGfx = () => $$('#gfx [data-gfx]').forEach(b => b.setAttribute('aria-pressed', String((SAVE.gfx || 'auto') === b.dataset.gfx)));
+  $('#gfx').addEventListener('click', e => { const b = e.target.closest('[data-gfx]'); if (!b) return; setGraphics(b.dataset.gfx); markGfx(); toast(b.dataset.gfx === 'low' ? 'Battery saver: fewer effects, smoother on older phones.' : b.dataset.gfx === 'high' ? 'High: every effect on.' : 'Auto: adjusts to keep things smooth.'); });
+  markGfx();
   $('#voice-on').checked = !SAVE.voiceOff; $('#voice-on').addEventListener('change', e => { SAVE.voiceOff = !e.target.checked; persist(); if (!SAVE.voiceOff) say('sail', true); });
   $('#sound').addEventListener('click', e => { SFX.on = !SFX.on; if (SFX.on) SFX.init(); e.currentTarget.setAttribute('aria-pressed', String(SFX.on)); e.currentTarget.setAttribute('aria-label', SFX.on ? 'Sound on' : 'Sound off'); $('#snd-wave').style.display = SFX.on ? '' : 'none'; });
   $('#tip-next').addEventListener('click', () => { tipIdx++; if (tipIdx >= TIPS.length) { SAVE.tips = true; persist(); } showTip(); });
@@ -3855,7 +3878,7 @@
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
   $('#sail-go').addEventListener('click', () => { const b = BOATS[sailIdx]; if (!SAVE.owned[b.id]) { if (!econ('buy', { slot: 'boat', id: b.id }).ok) return; SFX.coin(); persist(); renderAll(); renderSail(); return; } closeSail(); });
-  window.HookLineDebug = { S, ME, ACC, PM, cam: camera, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; camera.position.set(x, 14, z + 14); S.camLook = null; }, endRound: () => endRound(), skipOnboarding: () => { SAVE.onboarded = true; persist(); showOnboarding(false); }, mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
+  window.HookLineDebug = { S, ME, ACC, PM, Q, cam: camera, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; camera.position.set(x, 14, z + 14); S.camLook = null; }, endRound: () => endRound(), skipOnboarding: () => { SAVE.onboarded = true; persist(); showOnboarding(false); }, mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
 
   /* boot */
   (async () => {
@@ -3869,7 +3892,7 @@
     await Promise.all(MODEL_LIST.map(loadModel));
     if (!MODELS.boat || !MODELS.fish) { $('#loading span').textContent = 'Could not load the 3D models.'; return; }
     PS.water = makeParticles(2200, false); PS.glow = makeParticles(1800, true);
-    buildWorld(); setupPost();
+    buildWorld(); setupPost(); if (SAVE.gfx && SAVE.gfx !== "auto") setGraphics(SAVE.gfx);
     for (let i = 0; i < 5; i++) S.gulls.push(makeGull());
     S.wpMesh = makeWaypoint(); makeRings(); makeBottles(); makeSchools();
     await Promise.race([accP, new Promise(r => setTimeout(r, 3000))]);
