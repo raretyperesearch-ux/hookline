@@ -23,6 +23,7 @@ let db;
 try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (_) { db = null; }
 if (!db || !db.accounts) db = { v: 1, accounts: {}, sessions: {}, privy: {}, treasury: null };
 if (!db.market) db.market = { listings: [], sales: [] };
+if (!db.analytics) db.analytics = { days: {} };
 if (!db.treasury) db.treasury = { ax: +process.env.TREASURY_AX || 50000, in: 0, out: 0 };
 let saveT = null, writing = false, again = false;
 // write the whole file at most every 1.5s, off the request path; a write in flight queues one more
@@ -203,6 +204,47 @@ function marketCancel(acc, a) {
   return null;
 }
 
+/* ---------- analytics: first-party, aggregated, nothing leaves this server ----------
+   Events count per day (total + unique accounts), each account keeps the first time it hit a milestone
+   (the funnel) and the days it was active (retention). Names are whitelisted. */
+const EVENTS = new Set(['open', 'onboard_login', 'onboard_guest', 'onboard_angler', 'onboard_rod', 'sail', 'cast', 'hook', 'perfect_hook', 'catch', 'cut', 'kraken',
+  'sell', 'craft', 'buy_bait', 'buy_gear', 'market_list', 'market_buy', 'quest_claim', 'tab', 'signin', 'real_open', 'risk_ack', 'fund_start', 'real_trade', 'verified_catch', 'tutorial_done', 'error']);
+const MILESTONES = ['open', 'onboard_angler', 'onboard_rod', 'sail', 'cast', 'hook', 'catch', 'sell', 'craft', 'market_buy', 'market_list', 'tutorial_done', 'signin', 'real_open', 'risk_ack', 'fund_start', 'real_trade'];
+const dayKey = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
+function track(acc, name, now = Date.now()) {
+  if (!EVENTS.has(name)) return;
+  const d = dayKey(now), A = db.analytics.days[d] || (db.analytics.days[d] = { ev: {}, users: {} });
+  A.ev[name] = (A.ev[name] || 0) + 1;
+  if (!acc) return;
+  if (!acc.evDay || acc.evDay.d !== d) { acc.evDay = { d, seen: {} }; A.users.active = (A.users.active || 0) + 1; acc.days = acc.days || []; if (acc.days[acc.days.length - 1] !== d) { acc.days.push(d); if (acc.days.length > 120) acc.days.shift(); } }
+  if (!acc.evDay.seen[name]) { acc.evDay.seen[name] = 1; A.users[name] = (A.users[name] || 0) + 1; }
+  acc.ms = acc.ms || {}; if (MILESTONES.includes(name) && !acc.ms[name]) acc.ms[name] = now;
+}
+setInterval(() => { const keep = Object.keys(db.analytics.days).sort().slice(-180); for (const k of Object.keys(db.analytics.days)) if (!keep.includes(k)) delete db.analytics.days[k]; }, 6 * 3600e3);
+function adminStats(q) {
+  const now = Date.now(), accs = Object.values(db.accounts), days = Object.keys(db.analytics.days).sort();
+  const since = Math.max(1, Math.min(90, +q.get('days') || 30)), cut = now - since * 864e5;
+  const recent = accs.filter(a => a.created >= cut);
+  const activeIn = n => accs.filter(a => (a.days || []).some(d => Date.parse(d) >= now - n * 864e5)).length;
+  // retention: of accounts created on day D, how many came back on D+1 / D+7
+  const cohorts = [];
+  for (let i = 14; i >= 1; i--) {
+    const d = dayKey(now - i * 864e5), born = accs.filter(a => dayKey(a.created) === d); if (!born.length) continue;
+    const back = k => { const t = dayKey(Date.parse(d) + k * 864e5); return Date.parse(t) > now ? null : born.filter(a => (a.days || []).includes(t)).length; };
+    cohorts.push({ day: d, n: born.length, d1: back(1), d7: back(7) });
+  }
+  const econ = accs.map(a => ECON.normalize(a.econ));
+  return {
+    totals: { accounts: accs.length, signedIn: accs.filter(a => a.kind === 'privy').length, newInRange: recent.length, active1: activeIn(1), active7: activeIn(7), active30: activeIn(30), online: null },
+    dau: Array.from({ length: since }, (_, i) => dayKey(now - (since - 1 - i) * 864e5)).map(d => { const A = db.analytics.days[d]; return { day: d, users: A ? (A.users.active || 0) : 0, events: A ? Object.values(A.ev).reduce((a, b) => a + b, 0) : 0 }; }),
+    funnel: MILESTONES.map(m => ({ step: m, n: recent.filter(a => a.ms && a.ms[m]).length })),
+    cohorts,
+    today: Object.entries((db.analytics.days[dayKey(now)] || { users: {} }).users).sort((a, b) => b[1] - a[1]),
+    economy: { treasury: publicTreasury(), axInCirculation: econ.reduce((t, e) => t + e.ax, 0), fishInCoolers: econ.reduce((t, e) => t + e.cooler.length, 0), baitHeld: econ.reduce((t, e) => t + Object.values(e.baits).reduce((x, y) => x + y, 0), 0), listings: db.market.listings.length, marketSales7d: db.market.sales.filter(x => now - x.t < 7 * 864e5).length, wallets: accs.filter(a => a.wallet).length, verifiedFish: accs.reduce((t, a) => t + (a.verifiedCatches || 0), 0) },
+    errors: { lastDay: recentErrors.filter(e => now - e.t < 864e5).length, latest: recentErrors.slice(-5).reverse().map(e => ({ t: e.t, msg: e.msg, where: e.where })) },
+  };
+}
+
 /* ---------- routes ---------- */
 async function handle(req, res, url) {
   const p = url.pathname, method = req.method;
@@ -212,6 +254,17 @@ async function handle(req, res, url) {
       const b = await readBody(req, 8 * 1024); const row = { t: Date.now(), msg: String(b.msg || '').slice(0, 300), where: String(b.where || '').slice(0, 300), stack: String(b.stack || '').slice(0, 1500), ua: String(req.headers['user-agent'] || '').slice(0, 160), v: String(b.v || '').slice(0, 20) };
       recentErrors.push(row); if (recentErrors.length > 200) recentErrors.shift(); fs.appendFile(ERR_FILE, JSON.stringify(row) + '\n', () => { });
       return sendJson(res, 200, { ok: true }), true;
+    }
+    if (p === '/api/events' && method === 'POST') {
+      if (!allow('ev:' + clientIp(req), 120, 2)) return sendJson(res, 429, { ok: false }), true;
+      const b = await readBody(req, 16 * 1024), who = authed(req), list = Array.isArray(b.events) ? b.events.slice(0, 50) : [];
+      for (const ev of list) if (ev && typeof ev.e === 'string') track(who, ev.e, Math.min(Date.now(), +ev.t || Date.now()));
+      if (who) save();
+      return sendJson(res, 200, { ok: true }), true;
+    }
+    if (p === '/api/admin/stats' && method === 'GET') {
+      if (!ADMIN_TOKEN || req.headers['x-admin-token'] !== ADMIN_TOKEN) return sendJson(res, 403, { ok: false, error: 'forbidden' }), true;
+      return sendJson(res, 200, { ok: true, ...adminStats(url.searchParams) }), true;
     }
     if ((p === '/api/admin/errors' || p === '/api/admin/backup') && method === 'GET') {
       if (!ADMIN_TOKEN || req.headers['x-admin-token'] !== ADMIN_TOKEN) return sendJson(res, 403, { ok: false, error: 'forbidden' }), true;

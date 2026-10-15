@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>HookLine Ops</title>
+<style>
+  :root { --surface: #fcfcfb; --page: #f3f2ee; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781; --grid: #e1e0d9; --bar: #2a78d6; --bar-hi: #1c5cab; --card-b: #e1e0d9; --bad: #c4314b; --good: #1f8a5b; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --surface: #1a1a19; --page: #111110; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --bar: #3987e5; --bar-hi: #86b6ef; --card-b: #2c2c2a; --bad: #ff6b7a; --good: #4fd19a; } }
+  :root[data-theme="dark"] { --surface: #1a1a19; --page: #111110; --ink: #f0efec; --ink2: #c3c2b7; --muted: #898781; --grid: #2c2c2a; --bar: #3987e5; --bar-hi: #86b6ef; --card-b: #2c2c2a; --bad: #ff6b7a; --good: #4fd19a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 18px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  h1 { font-size: 20px; margin: 0; } h2 { font-size: 15px; margin: 0 0 10px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input, select, button { font: inherit; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--card-b); background: var(--surface); color: var(--ink); }
+  button { cursor: pointer; }
+  .muted { color: var(--muted); } .sub { color: var(--ink2); font-size: 12.5px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .tile, .card { background: var(--surface); border: 1px solid var(--card-b); border-radius: 12px; padding: 12px 14px; }
+  .tile b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; } .tile span { color: var(--ink2); font-size: 12.5px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis text { fill: var(--muted); font-size: 11px; } .axis line { stroke: var(--grid); }
+  .tip { position: fixed; pointer-events: none; background: var(--ink); color: var(--surface); padding: 5px 8px; border-radius: 6px; font-size: 12px; white-space: nowrap; transform: translate(-50%, calc(-100% - 10px)); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; } th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--grid); } th { color: var(--ink2); font-weight: 600; font-size: 12.5px; }
+  .err { font-family: ui-monospace, monospace; font-size: 12px; color: var(--ink2); overflow-wrap: anywhere; }
+  .gate { max-width: 420px; margin: 12vh auto; } .gate input { width: 100%; margin: 8px 0; }
+  .bad { color: var(--bad); } .good { color: var(--good); }
+</style></head><body><main>
+<div class="gate card" id="gate" hidden>
+  <h1>HookLine Ops</h1>
+  <p class="sub">Paste the <code>ADMIN_TOKEN</code> from the hookline service's variables in Railway. It stays in this browser.</p>
+  <input id="tok" type="password" autocomplete="off" placeholder="ADMIN_TOKEN"><button id="go" type="button">Open dashboard</button>
+  <p class="bad" id="gate-err" hidden></p>
+</div>
+<div id="app" hidden>
+  <header><div><h1>HookLine Ops</h1><span class="sub" id="upd"></span></div>
+    <div class="controls"><select id="range" aria-label="Range"><option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option></select><button id="refresh" type="button">Refresh</button><button id="out" type="button">Sign out</button></div></header>
+  <div class="tiles" id="tiles"></div>
+  <div class="grid2">
+    <div class="card"><h2>Daily active players</h2><div id="dau"></div></div>
+    <div class="card"><h2>New-player funnel <span class="sub" id="fun-sub"></span></h2><div id="funnel"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>Retention by start day</h2><div id="ret"></div></div>
+    <div class="card"><h2>Economy</h2><div class="tiles" id="econ" style="margin:0"></div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>Today: players who did each thing</h2><div id="today"></div></div>
+    <div class="card"><h2>Crashes <span class="sub" id="err-sub"></span></h2><div id="errs"></div></div>
+  </div>
+</div>
+<div class="tip" id="tip" hidden></div>
+<script>
+(() => {
+  const $ = s => document.querySelector(s), fmt = n => n == null ? '–' : Number(n).toLocaleString('en-US'), pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '–';
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let token = ''; try { token = localStorage.getItem('hookline-admin') || ''; } catch (_) { }
+  const tip = $('#tip'), showTip = (e, html) => { tip.innerHTML = html; tip.hidden = false; tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px'; }, hideTip = () => { tip.hidden = true; };
+  const LABEL = { active: 'Played', onboard_guest: 'Chose guest', onboard_login: 'Chose sign in', perfect_hook: 'Perfect hook', cut: 'Cut a line', kraken: 'Got liquidated (Kraken)', buy_bait: 'Bought bait', buy_gear: 'Bought gear', quest_claim: 'Claimed a quest', tab: 'Opened a tab', verified_catch: 'Verified real catch', open: 'Opened the game', onboard_angler: 'Picked an angler', onboard_rod: 'Picked a rod', sail: 'Set sail', cast: 'Cast a line', hook: 'Hooked a fish', catch: 'Landed a green fish', sell: 'Sold a fish', craft: 'Crafted bait', market_buy: 'Bought on the player market', market_list: 'Listed on the player market', tutorial_done: 'Finished the tutorial', signin: 'Signed in (Privy)', real_open: 'Opened play-for-real', risk_ack: 'Accepted 18+ risk', fund_start: 'Started adding funds', real_trade: 'Made a real trade' };
+
+  async function load() {
+    const days = $('#range').value;
+    const [r, h] = await Promise.all([fetch('/api/admin/stats?days=' + days, { headers: { 'x-admin-token': token } }).then(x => x.json()), fetch('/health').then(x => x.json()).catch(() => ({}))]);
+    if (!r.ok) { gate(r.error === 'forbidden' ? 'That token was not accepted.' : (r.error || 'Could not load.')); return; }
+    $('#gate').hidden = true; $('#app').hidden = false; $('#upd').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    const t = r.totals;
+    $('#tiles').innerHTML = [['Online now', h.players], ['Active today', t.active1], ['Active 7 days', t.active7], ['Active 30 days', t.active30], ['Accounts', t.accounts], ['Signed in (Privy)', t.signedIn], [`New (${days}d)`, t.newInRange], ['Server CPU', h.cpu != null ? h.cpu + '%' : '–']]
+      .map(([k, v]) => `<div class="tile"><b>${typeof v === 'string' ? v : fmt(v)}</b><span>${k}</span></div>`).join('');
+    bars($('#dau'), r.dau.map(d => ({ k: d.day.slice(5), v: d.users, tip: `<b>${d.day}</b><br>${fmt(d.users)} players · ${fmt(d.events)} events` })));
+    const top = r.funnel[0] ? r.funnel[0].n : 0; $('#fun-sub').textContent = `players who started in the last ${days} days`;
+    hbars($('#funnel'), r.funnel.map(f => ({ k: LABEL[f.step] || f.step, v: f.n, lab: `${fmt(f.n)} · ${pct(f.n, top)}` })));
+    $('#ret').innerHTML = r.cohorts.length ? `<table><thead><tr><th>Started</th><th>Players</th><th>Came back next day</th><th>Back after a week</th></tr></thead><tbody>${r.cohorts.slice().reverse().map(c => `<tr><td>${c.day}</td><td>${fmt(c.n)}</td><td>${c.d1 == null ? '<span class="muted">too soon</span>' : `${pct(c.d1, c.n)} <span class="muted">(${c.d1})</span>`}</td><td>${c.d7 == null ? '<span class="muted">too soon</span>' : `${pct(c.d7, c.n)} <span class="muted">(${c.d7})</span>`}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">No new players in the last two weeks yet.</p>';
+    const e = r.economy;
+    $('#econ').innerHTML = [['Harbor Treasury', fmt(e.treasury.ax) + ' AX'], ['Treasury paid out', fmt(e.treasury.out) + ' AX'], ['Fees into treasury', fmt(e.treasury.in) + ' AX'], ['AX held by players', fmt(e.axInCirculation)], ['Fish in coolers', fmt(e.fishInCoolers)], ['Bait held', fmt(e.baitHeld)], ['Market listings', fmt(e.listings)], ['Market sales (7d)', fmt(e.marketSales7d)], ['Wallets linked', fmt(e.wallets)], ['Verified real catches', fmt(e.verifiedFish)]]
+      .map(([k, v]) => `<div class="tile"><b style="font-size:18px">${v}</b><span>${k}</span></div>`).join('');
+    $('#today').innerHTML = r.today.length ? `<table><tbody>${r.today.map(([k, v]) => `<tr><td>${esc(LABEL[k] || k)}</td><td style="text-align:right">${fmt(v)}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">Nothing yet today.</p>';
+    $('#err-sub').textContent = `${fmt(r.errors.lastDay)} in the last 24h`;
+    $('#errs').innerHTML = r.errors.latest.length ? r.errors.latest.map(x => `<p class="err"><b>${esc(x.msg)}</b><br>${esc(x.where)} · ${new Date(x.t).toLocaleString()}</p>`).join('') : '<p class="good">No crashes reported.</p>';
+  }
+  // vertical bars, one series: thin bars with rounded tops, recessive axis, hover tooltip per bar
+  function bars(el, data) {
+    if (!data.length) { el.innerHTML = '<p class="muted">No data yet.</p>'; return; }
+    const W = 520, H = 200, P = { l: 34, r: 6, t: 8, b: 22 }, max = Math.max(1, ...data.map(d => d.v)), nice = Math.ceil(max / 4) * 4 || 4;
+    const bw = (W - P.l - P.r) / data.length, y = v => P.t + (H - P.t - P.b) * (1 - v / nice);
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily active players"><g class="axis">`;
+    for (let i = 0; i <= 4; i++) { const v = nice * i / 4; s += `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}"/><text x="${P.l - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`; }
+    const every = Math.ceil(data.length / 8); data.forEach((d, i) => { if (i % every === 0) s += `<text x="${P.l + bw * i + bw / 2}" y="${H - 6}" text-anchor="middle">${d.k}</text>`; });
+    s += '</g>';
+    data.forEach((d, i) => { const w = Math.max(2, Math.min(26, bw - 2)), x = P.l + bw * i + (bw - w) / 2, top = y(d.v), h = Math.max(0, H - P.b - top); s += `<g data-i="${i}"><rect x="${x - 1}" y="${P.t}" width="${bw}" height="${H - P.t - P.b}" fill="transparent"/>${h ? `<path d="M${x},${H - P.b} V${top + Math.min(4, h)} q0,-${Math.min(4, h)} ${Math.min(4, w / 2)},-${Math.min(4, h)} H${x + w - Math.min(4, w / 2)} q${Math.min(4, w / 2)},0 ${Math.min(4, w / 2)},${Math.min(4, h)} V${H - P.b} Z" fill="var(--bar)"/>` : ''}</g>`; });
+    el.innerHTML = s + '</svg>';
+    el.querySelectorAll('[data-i]').forEach(g => { g.addEventListener('mousemove', e => showTip(e, data[+g.dataset.i].tip)); g.addEventListener('mouseleave', hideTip); });
+  }
+  // horizontal bars for the funnel: label left, count and share direct-labelled
+  function hbars(el, data) {
+    const max = Math.max(1, ...data.map(d => d.v)), row = 24, W = 520, L = 190, H = data.length * row + 4;
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Funnel">`;
+    data.forEach((d, i) => { const y = i * row + 4, w = (W - L - 80) * d.v / max; s += `<text x="${L - 8}" y="${y + 14}" text-anchor="end" style="fill:var(--ink2);font-size:12px">${esc(d.k)}</text>${w > 0 ? `<rect x="${L}" y="${y + 3}" width="${Math.max(2, w)}" height="${row - 9}" rx="4" fill="var(--bar)"/>` : ''}<text x="${L + w + 6}" y="${y + 14}" style="fill:var(--ink);font-size:12px">${esc(d.lab)}</text>`; });
+    el.innerHTML = s + '</svg>';
+  }
+  function gate(msg) { $('#app').hidden = true; $('#gate').hidden = false; const ge = $('#gate-err'); ge.hidden = !msg; ge.textContent = msg || ''; }
+  $('#go').addEventListener('click', () => { token = $('#tok').value.trim(); try { localStorage.setItem('hookline-admin', token); } catch (_) { } load(); });
+  $('#tok').addEventListener('keydown', e => { if (e.key === 'Enter') $('#go').click(); });
+  $('#refresh').addEventListener('click', load); $('#range').addEventListener('change', load);
+  $('#out').addEventListener('click', () => { token = ''; try { localStorage.removeItem('hookline-admin'); } catch (_) { } gate(); });
+  if (token) load(); else gate();
+  setInterval(() => { if (token && !document.hidden && !$('#app').hidden) load(); }, 30000);
+})();
+</script>
+</main></body></html>

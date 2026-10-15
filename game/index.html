@@ -1353,6 +1353,15 @@
     } catch (e) { ACC.online = false; console.info('[HookLine] account server unreachable, playing on this device only:', e.message); }
     renderAll(); if (S.tab === 'market') renderMarket(); renderAccount();
   }
+  // analytics: a few named moments, batched, sent to our own server (no third parties)
+  const EVQ = [];
+  function track(e) { EVQ.push({ e, t: Date.now() }); if (EVQ.length >= 20) flushEvents(); }
+  function flushEvents() {
+    if (!EVQ.length) return; const events = EVQ.splice(0, 50);
+    try { fetch('/api/events', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json', ...(ACC.token ? { authorization: 'Bearer ' + ACC.token } : {}) }, body: JSON.stringify({ events }) }).catch(() => { }); } catch (_) { }
+  }
+  setInterval(flushEvents, 10000);
+  addEventListener('pagehide', flushEvents); document.addEventListener('visibilitychange', () => { if (document.hidden) flushEvents(); });
   // every AX movement: predict now, let the server decide
   function econ(action, args = {}) {
     const r = HL_ECON.apply(SAVE, action, args, { lvl: SAVE.lvl }); fixCharges();
@@ -1378,7 +1387,7 @@
     const r = await api('/api/auth/privy', { token: tok, email: u && u.email });
     if (!r.ok) { toast(r.error || 'Could not link your sign-in.', 'warn'); return null; }
     if (r.token) { ACC.token = r.token; try { localStorage.setItem(TOKEN_KEY, r.token); } catch (_) { } }
-    applyAccount(r.account, !!r.switched); ACC.treasury = r.treasury || ACC.treasury; renderAll();
+    track('signin'); applyAccount(r.account, !!r.switched); ACC.treasury = r.treasury || ACC.treasury; renderAll();
     return r;
   }
   const xpFor = l => Math.round(120 * Math.pow(l, 1.45));
@@ -2062,7 +2071,7 @@
     if (S.goTo && S.zone === S.goTo) S.goTo = null;
     return { st: 'CAST', t: `Hold cast · ${S.zone.mk.filter(m => !SAVE.dex[m]).length} new species here`, color: '#3ddc97' };
   }
-  function tutAdvance(to) { if ((SAVE.tut ?? 9) < to && (SAVE.tut ?? 9) < TUT.length) { SAVE.tut = to; persist(); const o = $('#obj'); o.classList.remove('done'); void o.offsetWidth; o.classList.add('done'); SFX.tone(988, 0.1, 'triangle', 0.2); SFX.tone(1318, 0.16, 'triangle', 0.2, null, 0.08); if (to === TUT.length) { addXp(50); toast('Tutorial done! +50 XP. Rounds run every 5 minutes: catch to climb the board.', 'good'); } } }
+  function tutAdvance(to) { if ((SAVE.tut ?? 9) < to && (SAVE.tut ?? 9) < TUT.length) { SAVE.tut = to; persist(); const o = $('#obj'); o.classList.remove('done'); void o.offsetWidth; o.classList.add('done'); SFX.tone(988, 0.1, 'triangle', 0.2); SFX.tone(1318, 0.16, 'triangle', 0.2, null, 0.08); if (to === TUT.length) { track('tutorial_done'); addXp(50); toast('Tutorial done! +50 XP. Rounds run every 5 minutes: catch to climb the board.', 'good'); } } }
   let objKey = '';
   function updateObjective() {
     const o = objective(), el = $('#obj');
@@ -2491,7 +2500,7 @@
     const tx = S.target && S.target.zone === zn ? S.target.obj.position.x : ME.x + Math.cos(ME.h) * dist;
     const tz = S.target && S.target.zone === zn ? S.target.obj.position.z : ME.z + Math.sin(ME.h) * dist;
     S.target = null;
-    S.cast = { spec, tx, tz, t: 0, zone: zn }; S.mode = 'windup'; S.mt = 0; ME.v = 0;
+    track('cast'); S.cast = { spec, tx, tz, t: 0, zone: zn }; S.mode = 'windup'; S.mt = 0; ME.v = 0;
     $('#tip').hidden = true; renderLive();
   }
   /* ---------- the bite: a wait that changes every cast, nibbles that tease, then STRIKE ----------
@@ -2524,7 +2533,7 @@
     const bp = new THREE.Vector3(c.tx, 0, c.tz); S.bite = null;
     splash3(bp, 1.8); geyser(bp, 1); foam(c.tx, c.tz, 3.5, 1.2, 0.9, '#ffffff'); S.shake = 0.5; S.fov = -6; flashScreen('#ffffff', 0.16, 0.9); buzz([30, 40, 60]);
     if (perfect) {
-      S.hookBonus = true; worldFloat('PERFECT HOOK!', new THREE.Vector3(ME.x, 3.2, ME.z), '#ffd23f'); SFX.tone(1568, 0.14, 'triangle', 0.22);
+      S.hookBonus = true; track('perfect_hook'); worldFloat('PERFECT HOOK!', new THREE.Vector3(ME.x, 3.2, ME.z), '#ffd23f'); SFX.tone(1568, 0.14, 'triangle', 0.22);
       if (!c.spec.shiny && Math.random() < 0.15) { c.spec.shiny = true; setTimeout(() => worldFloat('✦ SHINY! ✦', new THREE.Vector3(c.tx, 3, c.tz), '#fff3a0'), 400); }
     }
     hookFish();
@@ -2541,7 +2550,7 @@
     const lev = Math.min(rod().lev, MARKETS[c.spec.market].maxLev);
     const pos = await openFish(c.spec, lev, c.zone);
     if (!pos) { S.mode = 'idle'; S.hookBonus = false; renderLive(); return; }
-    S.active = pos.id; S.mode = 'fight'; S.mt = 0; tutAdvance(2);
+    S.active = pos.id; S.mode = 'fight'; S.mt = 0; tutAdvance(2); track('hook');
     if (S.hookBonus) { S.hookBonus = false; addXp(15); setTimeout(() => say('perfect'), 900); }
     showFish(pos, c.tx, c.tz); S.fishMeta.leap = 0; say('bite', true);
     renderLive();
@@ -2617,12 +2626,13 @@
     if (res.fraction >= 1 || res.reason !== 'stop') roundScore(pct * res.fraction);
     if (p.id === S.active || res.fraction >= 1) tutAdvance(3);
     const isActive = p.id === S.active && res.fraction >= 1;
-    if (res.reason === 'liquidated') {
+    if (p.real) track('real_trade');
+    if (res.reason === 'liquidated') { track('kraken');
       if (isActive) { S.mode = 'kraken'; S.mt = 0; }
       S.krakenAt = { x: S.fishObj ? S.fishObj.position.x : ME.x + 6, z: S.fishObj ? S.fishObj.position.z : ME.z, t: 0 };
       S.shake = 1; SFX.kraken(); say('kraken', true); buzz([200, 80, 300]); S.lastEv = { k: 'liq', mk: p.market, t: Date.now() };
       setTimeout(() => { $('#kr-meta').textContent = `${p.market} ${p.side > 0 ? 'long' : 'short'} ${p.leverage}× · lost ${fmtUSD(p.margin)} margin`; $('#o-kraken').hidden = false; }, isActive ? 2300 : 300);
-    } else if (res.reason === 'stop' || res.reason === 'cut') {
+    } else if (res.reason === 'stop' || res.reason === 'cut') { track('cut');
       if (res.fraction >= 1) S.streak = 0;
       if (isActive) { S.mode = 'snap'; S.mt = 0; S.snapFrom = S.fishObj ? S.fishObj.position.clone() : null; }
       say('cut', true); snip(m.knife || 'knife1'); S.lastEv = { k: 'cut', mk: p.market, t: Date.now() };
@@ -2637,7 +2647,7 @@
       if (!p.practice || true) { S.streak = win ? (S.streak || 0) + 1 : 0; if (win && S.streak >= 2) { addXp(10 * S.streak); setTimeout(() => zoneBanner(`${S.streak} WIN STREAK!`, `+${10 * S.streak} bonus XP`, '#3ddc97'), 900); } }
       if (isActive && S.mode !== 'pull') { S.mode = 'pull'; S.mt = 0; S.pullFrom = S.fishObj ? S.fishObj.position.clone() : null; }
       if (isActive) say(win ? 'win' : 'cut', true);
-      if (win) { quest('win', 1); SFX.win(); buzz([20, 40, 20, 40, 60]); } else SFX.escape();
+      if (win) { track('catch'); quest('win', 1); SFX.win(); buzz([20, 40, 20, 40, 60]); } else SFX.escape();
       S.lastEv = { k: win ? 'win' : 'rel', mk: p.market, pnl: +res.pnl.toFixed(2), t: Date.now() };
       const title = res.reason === 'take-profit' ? 'NETTED!' : res.reason === 'pulled' ? 'Pulled in!' : win ? 'Released a winner' : 'Released';
       pop(mk.fish, title, `${p.market} ${fmtSigned(res.pnl)} (${fmtPct(pct)}) · ${fmtUSD(res.returned)} back`, win ? 'win' : 'lose');
@@ -2700,7 +2710,7 @@
   rollQuests();
   function claim(id) {
     const q = SAVE.quests.find(x => x.id === id); if (!q || q.claimed || q.prog < q.goal) return;
-    const r = econ('claimQuest', { id }); if (!r.ok) { toast(r.err, 'warn'); return; } q.claimed = true; SFX.coin(); toast(`+${q.reward} AX`, 'good'); persist(); renderAll();
+    const r = econ('claimQuest', { id }); if (!r.ok) { toast(r.err, 'warn'); return; } q.claimed = true; track('quest_claim'); SFX.coin(); toast(`+${q.reward} AX`, 'good'); persist(); renderAll();
   }
 
   /* ================= driving ================= */
@@ -3424,7 +3434,7 @@
     if (slot === 'sonar') { if (!econ('sonar', { lvl: SONARS[+id].lvl }).ok) return; }
     else if (slot === 'lures') { if (!econ('lures').ok) return; }
     else {
-      const r = econ('buy', { slot, id }); if (!r.ok) { toast(r.err[0].toUpperCase() + r.err.slice(1) + '.', 'warn'); return; }
+      const r = econ('buy', { slot, id }); if (!r.ok) { toast(r.err[0].toUpperCase() + r.err.slice(1) + '.', 'warn'); return; } track('buy_gear');
       if (slot === 'boat') swapBoat();
     }
     SFX.coin(); toast('Bought with AX and equipped.', 'good'); persist(); renderAll();
@@ -3466,6 +3476,7 @@
     const an = e.target.closest('[data-angler]'); if (an) { ONB.angler = +an.dataset.angler; const a = ANGLERS[ONB.angler]; SAVE.coat = a.c; swapBoat(); renderAnglers(); SFX.init(); SFX.tone(880, 0.06, 'triangle', 0.15); return; }
     const rb = e.target.closest('[data-onbrod]'); if (rb) { ONB.rod = rb.dataset.onbrod; renderRods(); SFX.tone(740, 0.06, 'triangle', 0.15); return; }
     const go = e.target.closest('[data-onbgo]'); if (!go) return; const k = go.dataset.onbgo; SFX.init();
+    track(k === 'login' ? 'onboard_login' : k === 'guest' ? 'onboard_guest' : k === 'angler' ? 'onboard_angler' : k === 'rod' ? 'onboard_rod' : 'tab');
     if (k === 'login') {
       const api = realApi(); let linked = null;
       if (api) { try { go.textContent = 'Signing in…'; await api.login(); const st = await api.status(); renderReal(st); linked = await linkPrivy(); } catch (err) { go.textContent = 'SIGN IN'; toast(err.message || 'Sign-in was cancelled.', 'warn'); return; } }
@@ -3583,6 +3594,7 @@
   }
   function realErr(msg) { const e = $('#real-err'); e.textContent = msg; e.hidden = false; }
   async function openReal() {
+    track('real_open');
     $('#o-real').hidden = false; const api = realApi(); $('#real-demo-rib').hidden = !(api && api.demo);
     if (!api) { realStep(0); realErr('Real money mode is being set up (Privy + Lighter). Paper fishing works now; real fills are coming next.'); return; }
     const st = await api.status(); realStep(!st.signedIn ? 0 : st.balance > 0 ? 2 : 1); renderReal(st);
@@ -3597,9 +3609,9 @@
   }
   async function realLogin() { const api = realApi(); if (!api) return; try { await api.login(); await linkPrivy(); const st = await api.status(); renderReal(st); realStep(st.balance > 0 ? 2 : 1); } catch (e) { realErr(e.message || 'Sign-in was cancelled.'); } }
   function riskGate() { const ok = !!SAVE.riskAck; $('#risk-ack').checked = ok; $('#real-card').disabled = !ok; $('#real-crypto').disabled = !ok; }
-  $('#risk-ack').addEventListener('change', e => { SAVE.riskAck = e.target.checked ? Date.now() : 0; persist(); riskGate(); });
+  $('#risk-ack').addEventListener('change', e => { if (e.target.checked) track('risk_ack'); SAVE.riskAck = e.target.checked ? Date.now() : 0; persist(); riskGate(); });
   async function realFund(method) {
-    const api = realApi(); if (!api) return; if (!SAVE.riskAck) { realErr('Tick the box above to confirm you\'re 18+ and understand the risk.'); return; } const pr = $('#real-progress'); pr.hidden = false; $('#real-pi').style.width = '10%';
+    const api = realApi(); if (!api) return; track('fund_start'); if (!SAVE.riskAck) { realErr('Tick the box above to confirm you\'re 18+ and understand the risk.'); return; } const pr = $('#real-progress'); pr.hidden = false; $('#real-pi').style.width = '10%';
     try {
       const r = await api.fund(realAmt, method, (k, msg) => { $('#real-pi').style.width = Math.round(k * 100) + '%'; if (msg) $('#real-pt').textContent = msg; });
       $('#real-pt').textContent = 'Turning on trading (one automatic signature)…'; await api.enableTrading();
@@ -3744,9 +3756,9 @@
   $('#s-market').addEventListener('change', e => { if (e.target.id === 'pm-bait') { PM.sellBait = e.target.value; renderPlayerMarket(); } });
   $('#s-market').addEventListener('click', async e => {
     const t = e.target.closest('button'); if (!t || t.disabled) return;
-    if (t.dataset.pmbuy) { t.disabled = true; const r = await marketOp('buy', { id: t.dataset.pmbuy, qty: 1 }); if (r && r.ok) { SFX.coin(); toast('Bought! It\'s in your bait bag and on the hook.', 'good'); } }
+    if (t.dataset.pmbuy) { t.disabled = true; const r = await marketOp('buy', { id: t.dataset.pmbuy, qty: 1 }); if (r && r.ok) { track('market_buy'); SFX.coin(); toast('Bought! It\'s in your bait bag and on the hook.', 'good'); } }
     else if (t.dataset.pmcancel) { const r = await marketOp('cancel', { id: t.dataset.pmcancel }); if (r && r.ok) toast('Listing cancelled. Your bait is back.'); }
-    else if (t.id === 'pm-list') { t.disabled = true; const r = await marketOp('list', { bait: $('#pm-bait').value, qty: +$('#pm-qty').value, price: +$('#pm-price').value }); if (r && r.ok) { SFX.tone(880, 0.1, 'triangle', 0.2); toast('Listed! You\'ll get a message when it sells.', 'good'); } }
+    else if (t.id === 'pm-list') { t.disabled = true; const r = await marketOp('list', { bait: $('#pm-bait').value, qty: +$('#pm-qty').value, price: +$('#pm-price').value }); if (r && r.ok) { track('market_list'); SFX.tone(880, 0.1, 'triangle', 0.2); toast('Listed! You\'ll get a message when it sells.', 'good'); } }
   });
   setInterval(() => { if (!ACC.online) return; const every = S.tab === 'market' ? 15e3 : 60e3; if (Date.now() - PM.at > every) fetchMarket(); }, 5000);
   function renderMarket() {
@@ -3769,10 +3781,10 @@
   }
   $('#s-market').addEventListener('click', e => {
     const t = e.target.closest('button'); if (!t || t.disabled) return; let r = null;
-    if (t.dataset.sell) { r = econ('sell', { id: t.dataset.sell }); if (r.ok) { SFX.coin(); toast(`Sold for ${r.out.ax} AX`, 'good'); } }
-    else if (t.id === 'mk-sellall') { r = econ('sellAll'); if (r.ok) { SFX.coin(); toast(`Sold ${r.out.n} fish for ${r.out.ax} AX`, 'good'); } }
-    else if (t.dataset.craft) { const b = BAITS.find(x => x.id === t.dataset.craft); r = econ('craft', { id: b.id }); if (r.ok) { SFX.tone(784, 0.1, 'triangle', 0.2); SFX.tone(1175, 0.16, 'triangle', 0.2, null, 0.1); toast(`Crafted ${b.icon} ${b.name}`, 'good'); } }
-    else if (t.dataset.buybait) { const b = BAITS.find(x => x.id === t.dataset.buybait); r = econ('buyBait', { id: b.id }); if (r.ok) { SFX.coin(); toast(`Bought ${b.icon} ${b.name}`, 'good'); } }
+    if (t.dataset.sell) { r = econ('sell', { id: t.dataset.sell }); if (r.ok) { track('sell'); SFX.coin(); toast(`Sold for ${r.out.ax} AX`, 'good'); } }
+    else if (t.id === 'mk-sellall') { r = econ('sellAll'); if (r.ok) { track('sell'); SFX.coin(); toast(`Sold ${r.out.n} fish for ${r.out.ax} AX`, 'good'); } }
+    else if (t.dataset.craft) { const b = BAITS.find(x => x.id === t.dataset.craft); r = econ('craft', { id: b.id }); if (r.ok) { track('craft'); SFX.tone(784, 0.1, 'triangle', 0.2); SFX.tone(1175, 0.16, 'triangle', 0.2, null, 0.1); toast(`Crafted ${b.icon} ${b.name}`, 'good'); } }
+    else if (t.dataset.buybait) { const b = BAITS.find(x => x.id === t.dataset.buybait); r = econ('buyBait', { id: b.id }); if (r.ok) { track('buy_bait'); SFX.coin(); toast(`Bought ${b.icon} ${b.name}`, 'good'); } }
     else if (t.dataset.usebait) r = econ('setBait', { id: SAVE.baitEq === t.dataset.usebait ? null : t.dataset.usebait });
     else return;
     if (r && !r.ok) toast(r.err[0].toUpperCase() + r.err.slice(1) + '.', 'warn');
@@ -3896,12 +3908,12 @@
   $('#sail-prev').addEventListener('click', () => { sailIdx = (sailIdx + BOATS.length - 1) % BOATS.length; SFX.tone(660, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
-  $('#sail-go').addEventListener('click', () => { const b = BOATS[sailIdx]; if (!SAVE.owned[b.id]) { if (!econ('buy', { slot: 'boat', id: b.id }).ok) return; SFX.coin(); persist(); renderAll(); renderSail(); return; } closeSail(); });
+  $('#sail-go').addEventListener('click', () => { track('sail'); const b = BOATS[sailIdx]; if (!SAVE.owned[b.id]) { if (!econ('buy', { slot: 'boat', id: b.id }).ok) return; SFX.coin(); persist(); renderAll(); renderSail(); return; } closeSail(); });
   window.HookLineDebug = { S, ME, ACC, PM, Q, cam: camera, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; camera.position.set(x, 14, z + 14); S.camLook = null; }, endRound: () => endRound(), skipOnboarding: () => { SAVE.onboarded = true; persist(); showOnboarding(false); }, mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
 
   /* boot */
   (async () => {
-    const accP = accountBoot();   // your account loads while the world does
+    const accP = accountBoot().then(() => { track('open'); flushEvents(); });   // your account loads while the world does
     await venue.connect();
     const feed = new LighterFeed(venue); venue.liveSubs = [() => { renderVenueBadge(); toast('Live Lighter prices connected. Fills are paper until a relay is linked.', 'good'); }]; feed.start(); S.feed = feed;
     S.positions = [...venue.positions.values()];
