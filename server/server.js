@@ -9,7 +9,11 @@ const accounts = require('./accounts');
 
 // the game itself is served from ../game so one service is the whole deployment
 const GAME_DIR = path.resolve(process.env.GAME_DIR || path.join(__dirname, '..', 'game'));
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png', '.css': 'text/css', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.wasm': 'application/wasm', '.gz': 'application/gzip' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png', '.css': 'text/css', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.wasm': 'application/wasm', '.gz': 'application/gzip', '.glb': 'model/gltf-binary', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2' };
+// text and models go out gzipped (compressed once, kept in memory until the file changes)
+const zlib = require('zlib');
+const GZ_TYPES = new Set(['.html', '.js', '.json', '.css', '.svg', '.glb', '.wasm']);
+const gzCache = new Map();   // file -> { mtime, buf }
 function serveStatic(req, res) {
   let p = decodeURIComponent((req.url || '/').split('?')[0]); if (p === '/' || p === '') p = '/index.html';
   const file = path.resolve(GAME_DIR, '.' + p);
@@ -17,7 +21,14 @@ function serveStatic(req, res) {
   fs.stat(file, (err, st) => {
     if (err || !st.isFile()) { res.writeHead(404); res.end('not found'); return; }
     const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, { 'content-type': TYPES[ext] || 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=86400', 'content-length': st.size });
+    const head = { 'content-type': TYPES[ext] || 'application/octet-stream', 'cache-control': ext === '.html' ? 'no-cache' : 'public, max-age=86400', vary: 'accept-encoding' };
+    if (GZ_TYPES.has(ext) && st.size > 1024 && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
+      let c = gzCache.get(file);
+      if (!c || c.mtime !== st.mtimeMs) { try { c = { mtime: st.mtimeMs, buf: zlib.gzipSync(fs.readFileSync(file), { level: 9 }) }; gzCache.set(file, c); } catch (_) { c = null; } }
+      if (c) { res.writeHead(200, { ...head, 'content-encoding': 'gzip', 'content-length': c.buf.length }); res.end(req.method === 'HEAD' ? undefined : c.buf); return; }
+    }
+    res.writeHead(200, { ...head, 'content-length': st.size });
+    if (req.method === 'HEAD') return res.end();
     fs.createReadStream(file).pipe(res);
   });
 }

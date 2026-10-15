@@ -1037,6 +1037,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/libs/meshopt_decoder.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/CopyShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/postprocessing/EffectComposer.js"></script>
@@ -1454,8 +1455,9 @@
 
   const MODELS = {};
   const loader = has3D ? new THREE.GLTFLoader() : null;
+  if (loader && window.MeshoptDecoder) loader.setMeshoptDecoder(window.MeshoptDecoder);   // models are meshopt-compressed .glb (about 5x smaller than the Blender export)
   let loaded = 0, toLoad = 1;
-  const loadModel = n => new Promise(res => loader.load(`models/${n}.json`, g => { loaded++; const li = document.getElementById('load-i'); if (li) li.style.width = (loaded / toLoad * 100) + '%'; g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); MODELS[n] = g.scene; res(g.scene); }, undefined, () => { loaded++; res(null); }));
+  const loadModel = n => new Promise(res => loader.load(`models/${n}.glb`, g => { loaded++; const li = document.getElementById('load-i'); if (li) li.style.width = (loaded / toLoad * 100) + '%'; g.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); MODELS[n] = g.scene; res(g.scene); }, undefined, () => { loaded++; res(null); }));
 
   // ---------- water: gerstner-style swell, sun glints, shallows + shore foam, caustics, zone rings, cloud shadows, the Kraken's whirlpool ----------
   const MAX_ISL = 16, MAX_ZN = 10;
