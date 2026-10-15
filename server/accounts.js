@@ -26,7 +26,9 @@ if (!db || !db.accounts) db = { v: 1, accounts: {}, sessions: {}, privy: {}, tre
 if (!db.market) db.market = { listings: [], sales: [] };
 if (!db.analytics) db.analytics = { days: {} };
 if (!db.wallets) db.wallets = {};
-if (!db.refs) db.refs = {};   // referral code -> account id   // wallet address -> account id (one HookLine account per wallet)
+if (!db.refs) db.refs = {};
+if (!db.boards) db.boards = {};   // 'd:2026-10-15' | 'w:2026-10-13' (Monday) | 'all' -> account id -> { big, bigMk, haul, sp, n }
+if (!db.settled) db.settled = {};   // referral code -> account id   // wallet address -> account id (one HookLine account per wallet)
 if (!db.treasury) db.treasury = { ax: +process.env.TREASURY_AX || 50000, in: 0, out: 0 };
 let saveT = null, writing = false, again = false;
 // write the whole file at most every 1.5s, off the request path; a write in flight queues one more
@@ -127,7 +129,7 @@ function authed(req) {
   return acc;
 }
 // what the browser gets back: knife charges use -1 for "never dulls" (JSON has no Infinity)
-const view = acc => ({ banned: !!acc.banned, referredBy: !!acc.referredBy, wallet: acc.wallet || null, lighter: acc.lighter || [], id: acc.id, kind: acc.kind, nick: acc.nick || acc.profile.nick || '', coat: acc.coat || acc.profile.coat || null, email: acc.email || null, econ: ECON.pick(ECON.normalize(acc.econ)), profile: acc.profile, mode: MODE });
+const view = acc => ({ crown: hasCrown(acc) ? (acc.crownPlace || 1) : 0, banned: !!acc.banned, referredBy: !!acc.referredBy, wallet: acc.wallet || null, lighter: acc.lighter || [], id: acc.id, kind: acc.kind, nick: acc.nick || acc.profile.nick || '', coat: acc.coat || acc.profile.coat || null, email: acc.email || null, econ: ECON.pick(ECON.normalize(acc.econ)), profile: acc.profile, mode: MODE });
 const publicTreasury = () => ({ ax: Math.floor(db.treasury.ax), in: Math.floor(db.treasury.in), out: Math.floor(db.treasury.out), buyback: ECON.DAILY_BUYBACK });
 
 /* ---------- Privy: verify the access token the browser got at sign-in ---------- */
@@ -302,6 +304,43 @@ function adminAction(a, b) {
   }
 }
 
+/* ---------- leaderboards: today, this week, all time ----------
+   Boards: haul (total $ profit landed), big (biggest single fish in $), species (different markets landed).
+   Each week the top 3 by haul win AX from the Treasury and wear a crown the following week. */
+const WEEK_PRIZES = [500, 300, 150];
+const weekKey = (t = Date.now()) => { const d = new Date(t), back = (d.getUTCDay() + 6) % 7; return 'w:' + new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - back)).toISOString().slice(0, 10); };
+const lastWeekKey = () => weekKey(Date.now() - 7 * 864e5);
+function boardAdd(acc, f) {
+  if (!f || !(f.usd > 0)) return;
+  for (const k of ['d:' + dayKey(), weekKey(), 'all']) {
+    const B = db.boards[k] || (db.boards[k] = {}), r = B[acc.id] || (B[acc.id] = { big: 0, bigMk: null, haul: 0, sp: {}, n: 0 });
+    r.n++; r.haul = +(r.haul + f.usd).toFixed(2); if (f.usd > r.big) { r.big = f.usd; r.bigMk = f.mk; } r.sp[f.mk] = 1;
+  }
+}
+function boardRows(key, board) {
+  const B = db.boards[key] || {};
+  return Object.entries(B).map(([id, r]) => { const a = db.accounts[id]; return a && !a.banned ? { id, nick: a.nick || 'Angler', coat: a.coat || null, v: board === 'species' ? Object.keys(r.sp).length : r[board], mk: board === 'big' ? r.bigMk : null } : null; })
+    .filter(x => x && x.v > 0).sort((x, y) => y.v - x.v);
+}
+function settleWeeks() {
+  const cur = weekKey();
+  for (const k of Object.keys(db.boards)) {
+    if (!k.startsWith('w:') || k >= cur || db.settled[k]) continue;
+    db.settled[k] = Date.now();
+    boardRows(k, 'haul').slice(0, 3).forEach((row, i) => {
+      const a = db.accounts[row.id]; if (!a) return; const ax = WEEK_PRIZES[i], e = ECON.normalize(a.econ);
+      e.ax += ax; db.treasury.ax -= ax; db.treasury.out += ax; a.crown = k; a.crownPlace = i + 1;
+      inbox(a, { k: 'crown', place: i + 1, ax, week: k.slice(2) }); ledger({ acc: a.id, a: 'week-prize', place: i + 1, d: ax, ax: e.ax, week: k });
+    });
+    save();
+  }
+  // keep 10 days and 10 weeks
+  const days = Object.keys(db.boards).filter(k => k.startsWith('d:')).sort(), weeks = Object.keys(db.boards).filter(k => k.startsWith('w:')).sort();
+  for (const k of [...days.slice(0, -10), ...weeks.slice(0, -10)]) delete db.boards[k];
+}
+setInterval(settleWeeks, 10 * 60e3); setTimeout(settleWeeks, 20e3);
+const hasCrown = a => !!a.crown && a.crown === lastWeekKey();
+
 /* ---------- routes ---------- */
 async function handle(req, res, url) {
   const p = url.pathname, method = req.method;
@@ -377,6 +416,16 @@ async function handle(req, res, url) {
         return sendJson(res, 200, { ok: true }), true;
       }
     }
+    if (p === '/api/leaderboard' && method === 'GET') {
+      const period = ['day', 'week', 'all'].includes(url.searchParams.get('period')) ? url.searchParams.get('period') : 'day';
+      const board = ['haul', 'big', 'species'].includes(url.searchParams.get('board')) ? url.searchParams.get('board') : 'haul';
+      const key = period === 'day' ? 'd:' + dayKey() : period === 'week' ? weekKey() : 'all', rows = boardRows(key, board), me = authed(req);
+      const meI = me ? rows.findIndex(x => x.id === me.id) : -1, now = Date.now();
+      const ends = period === 'day' ? Date.parse(dayKey()) + 864e5 : period === 'week' ? Date.parse(weekKey().slice(2)) + 7 * 864e5 : null;
+      return sendJson(res, 200, { ok: true, period, board, total: rows.length, ends, prizes: WEEK_PRIZES,
+        top: rows.slice(0, 20).map((x, i) => ({ rank: i + 1, nick: x.nick, coat: x.coat, v: x.v, mk: x.mk, me: !!me && x.id === me.id, crown: !!db.accounts[x.id] && hasCrown(db.accounts[x.id]) })),
+        me: me ? { rank: meI >= 0 ? meI + 1 : null, v: meI >= 0 ? rows[meI].v : 0 } : null }), true;
+    }
     const acc = authed(req);
     if (!acc) return sendJson(res, 401, { ok: false, error: 'no session' }), true;
     if (acc.banned && p !== '/api/me') return sendJson(res, 403, { ok: false, error: 'this account is suspended. Contact support if you think this is a mistake.' }), true;
@@ -419,6 +468,7 @@ async function handle(req, res, url) {
       const before = acc.econ.ax, tBefore = db.treasury.ax;
       const r = ECON.apply(acc.econ, action, args, { now: Date.now(), lvl: acc.profile.lvl || 1, treasury: db.treasury, live: MODE === 'live', id: () => newId('f') });
       if (r.ok) {
+        if (action === 'catch' && r.out && r.out.fish) boardAdd(acc, r.out.fish);
         const paid = tBefore - db.treasury.ax; if (paid > 0) db.treasury.out += paid;
         if (acc.econ.ax !== before || paid) ledger({ acc: acc.id, a: action, d: acc.econ.ax - before, ax: acc.econ.ax, tr: paid ? -paid : undefined });
         save();
@@ -460,7 +510,7 @@ async function handle(req, res, url) {
       acc.usedTrades = [...(acc.usedTrades || []), ...v.tradeIds].slice(-3000);
       const lev = Math.max(1, Math.min(+b.lev || 1, 50)), margin = v.notional / lev, pct = margin > 0 ? v.pnl / margin : 0;
       const r = ECON.apply(acc.econ, 'catch', { mk, side, lev, margin, pct, usd: v.pnl, shiny: !!b.shiny, bait: b.bait || null, real: true, verified: true }, { now: Date.now(), lvl: acc.profile.lvl || 1, live: MODE === 'live', id: () => newId('f') });
-      if (r.ok) { acc.verifiedCatches = (acc.verifiedCatches || 0) + 1; track(acc, 'verified_catch'); }
+      if (r.ok) { acc.verifiedCatches = (acc.verifiedCatches || 0) + 1; track(acc, 'verified_catch'); if (r.out && r.out.fish) boardAdd(acc, r.out.fish); }
       save(); ledger({ acc: acc.id, a: 'realcatch', mk, side, pnl: +v.pnl.toFixed(4), notional: +v.notional.toFixed(2), trades: v.tradeIds, ok: r.ok });
       return sendJson(res, 200, { ok: r.ok, error: r.err, out: r.out, verified: { pnl: v.pnl, notional: v.notional, pct }, econ: ECON.pick(acc.econ), treasury: publicTreasury() }), true;
     }

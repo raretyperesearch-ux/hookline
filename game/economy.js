@@ -73,7 +73,7 @@
       { id: 'newsp', text: n => `Discover ${n} new species`, n: [1, 2, 3], reward: 90, icon: 'book' },
       { id: 'frenzy', text: n => `Hook ${n} fish in a Frenzy zone`, n: [1, 2], reward: 100, icon: 'star' },
       { id: 'perfect', text: n => `Make ${n} PERFECT casts`, n: [2, 3], reward: 70, icon: 'rod2' },
-      { id: 'podium', text: () => 'Finish a round in the top 3', n: [1], reward: 120, icon: 'trophy' },
+      { id: 'haul', text: n => `Land $${n * 5} of profit today`, n: [1, 2, 4], reward: 100, icon: 'trophy' },   // progress counts $5 steps
       { id: 'shiny', text: () => 'Hook a shiny fish ✦', n: [1], reward: 150, icon: 'star' },
       { id: 'rings', text: () => 'Chain 3 speed rings', n: [1], reward: 70, icon: 'bolt' },
       { id: 'trick', text: n => `Land ${n} spin tricks`, n: [1, 2], reward: 70, icon: 'star' },

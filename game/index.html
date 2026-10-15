@@ -667,6 +667,13 @@
   .invite b { font-family: var(--display); font-size: 16px; } .invite p { margin: 0; font-size: 12.5px; color: #cfe6f7; line-height: 1.45; }
   .invite .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; } .invite .inv-stats { font-size: 12px; color: #b9d6ee; }
   .invite code { display: block; background: #06213b; border-radius: 10px; padding: 9px 10px; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .board .seg { margin: 4px 0; } .board .seg button { font-size: 12.5px; padding: 7px 10px; }
+  .lb { list-style: none; margin: 8px 0 4px; padding: 0; width: 100%; max-width: 360px; display: grid; gap: 4px; max-height: 46vh; overflow: auto; }
+  .lb li { display: grid; grid-template-columns: 30px 12px minmax(0, 1fr) auto; gap: 8px; align-items: center; background: rgba(255,255,255,.06); border-radius: 10px; padding: 7px 10px; font-weight: 800; font-size: 14px; }
+  .lb li.me { background: rgba(255,210,63,.18); outline: 1.5px solid rgba(255,210,63,.6); } .lb .rk { text-align: center; } .lb .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .lb .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .lb .nm small { display: block; font-size: 11px; color: #9ab8d3; font-weight: 700; } .lb b { font-family: var(--mono); color: #3ddc97; }
+  .lb .lb-empty { grid-template-columns: 1fr; text-align: center; color: #b9d6ee; font-weight: 700; }
+  .lb-me { font-weight: 800; margin: 2px 0; } .lb-foot { font-size: 12px; color: #9ab8d3; max-width: 340px; margin: 0 0 6px; }
   .voice-toggle { display: inline-flex; gap: 8px; align-items: center; margin: 0 0 12px; font-weight: 700; }
   .tag.say > span { display: block; position: relative; left: calc(50% + 26px); top: 6px; border-bottom-left-radius: 4px; background: #fff; color: var(--ink); font-family: var(--display); font-size: 15px; padding: 5px 12px; border-radius: 14px; box-shadow: 0 3px 0 rgba(6,26,51,.4); animation: pop .25s both; }
   .tag.say > span::after { content: ''; position: absolute; left: -8px; bottom: 2px; border: 8px solid transparent; border-left: 0; border-right-color: #fff; border-bottom-width: 0; }
@@ -687,7 +694,7 @@
     <div id="edges"></div>
     <div id="newfish-slot"></div>
     <div class="obj" id="obj" hidden><span class="st" id="obj-st">1/4</span><span id="obj-t"></span></div>
-    <div class="roundbox" id="roundbox" role="button" aria-label="Round leaderboard"><div class="rh"><span>🏆 ROUND<b class="me-rank" id="rb-me"></b></span><small id="rb-time">5:00</small></div><ol id="rb-list"></ol><div class="fz" id="rb-fz" hidden></div></div>
+    <div class="roundbox" id="roundbox" role="button" aria-label="Round leaderboard"><div class="rh"><span>🏆 TODAY<b class="me-rank" id="rb-me"></b></span><small id="rb-time">5:00</small></div><ol id="rb-list"></ol><div class="fz" id="rb-fz" hidden></div></div>
     <div class="drive-hint" id="drive-hint"><kbd>WASD</kbd> drive · <kbd>Shift</kbd> boost · <kbd>Space</kbd> cast (stopped) / hop (moving) · <kbd>C</kbd> cut · <kbd>1-6</kbd> emote</div>
     <div class="loading" id="loading"><img src="art/logo.webp" alt=""><div class="lbar"><i id="load-i"></i></div><span>Loading the lake…</span></div>
 
@@ -876,14 +883,15 @@
       </div>
     </div>
 
-    <div class="overlay podium" id="o-podium" hidden>
+    <div class="overlay howto board" id="o-board" hidden>
       <button class="xclose" type="button" data-xclose aria-label="Close">×</button>
-      <div class="rays"></div>
-      <span class="ribbon">ROUND OVER</span>
-      <h3 id="pd-title">Round results</h3>
-      <div class="steps" id="pd-steps"></div>
-      <p class="you" id="pd-you"></p>
-      <div class="actions"><button class="big-btn reel" id="pd-close" type="button">NEXT ROUND</button></div>
+      <h3 style="font-size:28px">🏆 Leaderboards</h3>
+      <div class="seg" id="lb-period"><button type="button" data-p="day">Today</button><button type="button" data-p="week">This week</button><button type="button" data-p="all">All time</button></div>
+      <div class="seg" id="lb-board"><button type="button" data-b="haul">Top haul</button><button type="button" data-b="big">Biggest catch</button><button type="button" data-b="species">Most species</button></div>
+      <ol class="lb" id="lb-list"></ol>
+      <p class="lb-me" id="lb-me"></p>
+      <p class="lb-foot" id="lb-foot"></p>
+      <button class="big-btn ghost" id="lb-crew" type="button" style="max-width:300px">WHO'S ON THE WATER</button>
     </div>
 
     <div class="overlay real demo-login" id="o-demo-login" hidden>
@@ -1339,7 +1347,7 @@
   }
   function applyEcon(e) { if (!e) return; for (const k of HL_ECON.KEYS) if (e[k] !== undefined) SAVE[k] = e[k]; fixCharges(); try { localStorage.setItem('hookline-lighter-v1', JSON.stringify(SAVE)); } catch (_) { } }
   function applyAccount(a, fresh) {
-    if (!a) return; ACC.id = a.id; ACC.kind = a.kind; ACC.wallet = a.wallet || null; ACC.lighter = a.lighter || []; ACC.mode = a.mode || 'demo'; ACC.email = a.email || null;
+    if (!a) return; ACC.crown = a.crown || 0; ACC.id = a.id; ACC.kind = a.kind; ACC.wallet = a.wallet || null; ACC.lighter = a.lighter || []; ACC.mode = a.mode || 'demo'; ACC.email = a.email || null;
     applyEcon(a.econ);
     const pr = a.profile || {};
     // the server's profile wins unless this device is further along (an offline session)
@@ -2045,51 +2053,73 @@
     }
   }
 
-  /* ================= rounds, frenzy, objectives ================= */
-  // rounds are cut from the wall clock, so every player sees the same round and frenzy with no server
-  const ROUND_MS = 5 * 60 * 1000, FRENZY_FROM = 50e3, FRENZY_TO = 230e3;
+  /* ================= world events, leaderboards, objectives =================
+     There are no rounds: the world keeps going. Events are cut from the shared clock (Frenzy) or from the live
+     market and the boats around you (whale sightings, Kraken watch), so everyone sees the same thing with no server.
+     Leaderboards (today, this week, all time) live on the server: server/accounts.js. */
+  const FRENZY_SLOT = 12 * 60e3, FRENZY_LEN = 5 * 60e3;
   const FRENZY_ZONES = ['reef', 'bay', 'pier', 'lagoon', 'bayou', 'gold', 'abyss'];
-  const roundNow = () => { const t = Date.now(); return { id: Math.floor(t / ROUND_MS), el: t % ROUND_MS, left: ROUND_MS - (t % ROUND_MS) }; };
+  const frenzySlot = () => { const t = Date.now(); return { id: Math.floor(t / FRENZY_SLOT), el: t % FRENZY_SLOT }; };
   const frenzyFor = id => ZONES.find(z => z.id === FRENZY_ZONES[(id * 7 + 3) % FRENZY_ZONES.length]);
-  const frenzyNow = () => { const r = roundNow(); return r.el > FRENZY_FROM && r.el < FRENZY_TO ? frenzyFor(r.id) : null; };
-  S.round = { id: roundNow().id, score: 0, crown: false };
-  function roundScore(pct) { S.round.score += pct; renderRound(); sendPresence(); }
-  const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-  function roundRows() {
-    const rows = [{ name: 'You', sc: S.round.score, me: true, b: SAVE.eq.boat }];
-    if (peers.size) for (const e of peers.values()) { const pr = e.presence || {}; if (pr.rid === S.round.id) rows.push({ name: e.name, sc: +pr.rs || 0, b: pr.b }); }
-    else for (const b of S.bots) rows.push({ name: b.name.replace(' (bot)', ''), sc: b.rs || 0, b: b.boat.kind, bot: true });
-    return rows.sort((a, b) => b.sc - a.sc);
-  }
+  const frenzyNow = () => { const r = frenzySlot(); return r.el < FRENZY_LEN ? frenzyFor(r.id) : null; };
+  const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return s >= 172800 ? `${Math.floor(s / 86400)}d ${Math.floor(s % 86400 / 3600)}h` : s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor(s % 3600 / 60)}m` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  // leaderboard pill (top right) + the leaderboard screen
+  const LB = { period: 'day', board: 'haul', data: null, pill: null, at: 0 };
+  const LB_NAME = { haul: 'Top haul', big: 'Biggest catch', species: 'Most species' }, LB_PERIOD = { day: 'Today', week: 'This week', all: 'All time' };
+  const lbVal = (board, v) => board === 'species' ? `${v} species` : fmtUSD(v);
+  async function fetchPill() { try { const r = await api('/api/leaderboard?period=day&board=haul'); if (r.ok) { LB.pill = r; renderRound(); } } catch (_) { } LB.at = Date.now(); }
   function renderRound() {
-    const r = roundNow(), rows = roundRows(), meI = rows.findIndex(x => x.me);
-    $('#rb-time').textContent = mmss(r.left);
-    $('#rb-me').textContent = `#${meI + 1}`; { const rb = $('#roundbox'); if (W < 481) { if (!rb._t) rb.classList.add('mini'); } else rb.classList.remove('mini'); }
-    const show = rows.slice(0, 3); if (meI > 2) show.push(rows[meI]);
-    $('#rb-list').innerHTML = show.map(x => `<li class="${x.me ? 'me' : ''}"><span>${rows.indexOf(x) + 1}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.name)}</span><b class="${x.sc >= 0 ? 'up' : 'down'}">${fmtPct(x.sc)}</b></li>`).join('');
-    const fz = frenzyNow(), fe = $('#rb-fz');
-    if (fz) { fe.hidden = false; fe.textContent = `FRENZY: ${fz.name} · ${mmss(FRENZY_TO - r.el)}`; }
-    else if (r.el < FRENZY_FROM) { fe.hidden = false; fe.textContent = `Frenzy soon: ${frenzyFor(r.id).name}`; fe.style.opacity = .7; }
-    else fe.hidden = true;
-    if (fz) fe.style.opacity = 1;
+    const me = LB.pill && LB.pill.me, fz = frenzyNow(), r = frenzySlot();
+    $('#rb-me').textContent = me && me.rank ? `#${me.rank}` : '';
+    $('#rb-time').textContent = me && me.rank ? lbVal('haul', me.v) : 'Today';
+    const rl = $('#rb-list'); rl.innerHTML = LB.pill && LB.pill.top.length ? LB.pill.top.slice(0, 3).map(x => `<li class="${x.me ? 'me' : ''}"><span>${x.rank}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.crown ? '👑 ' : ''}${esc(x.nick)}</span><b class="up">${lbVal('haul', x.v)}</b></li>`).join('') : '<li><span></span><span>Land a green fish to get on today\'s board</span><b></b></li>';
+    const fe = $('#rb-fz'); fe.hidden = false; fe.style.opacity = fz ? 1 : 0.7;
+    fe.textContent = fz ? `FRENZY: ${fz.name} · ${mmss(FRENZY_LEN - r.el)}` : `Next frenzy: ${frenzyFor(r.id + 1).name} in ${mmss(FRENZY_SLOT - r.el)}`;
+    { const rb = $('#roundbox'); if (W < 481) { if (!rb._t) rb.classList.add('mini'); } else rb.classList.remove('mini'); }
+  }
+  async function openBoard() {
+    $('#o-board').hidden = false; renderBoard();
+    const r = await api(`/api/leaderboard?period=${LB.period}&board=${LB.board}`).catch(() => null); if (r && r.ok) { LB.data = r; renderBoard(); }
+  }
+  function renderBoard() {
+    $$('#lb-period [data-p]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === LB.period)));
+    $$('#lb-board [data-b]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.b === LB.board)));
+    const d = LB.data && LB.data.period === LB.period && LB.data.board === LB.board ? LB.data : null, list = $('#lb-list');
+    if (!d) { list.innerHTML = '<li class="lb-empty">Loading…</li>'; return; }
+    list.innerHTML = d.top.length ? d.top.map(x => `<li class="${x.me ? 'me' : ''}"><span class="rk">${x.rank <= 3 ? ['🥇', '🥈', '🥉'][x.rank - 1] : x.rank}</span><i class="dot" style="background:${x.coat ? safeColor(x.coat) : '#5fb4ff'}"></i><span class="nm">${x.crown ? '👑 ' : ''}${esc(x.nick)}${x.mk && MARKETS[x.mk] ? `<small>${esc(MARKETS[x.mk].name)}</small>` : ''}</span><b>${lbVal(d.board, x.v)}</b></li>`).join('')
+      : `<li class="lb-empty">Nobody on this board yet. Land a green fish and it's yours.</li>`;
+    const me = d.me; $('#lb-me').textContent = me ? (me.rank ? `You're #${me.rank} of ${d.total} · ${lbVal(d.board, me.v)}` : `You're not on this board yet${d.board === 'species' ? '' : ': land a green fish'}.`) : '';
+    $('#lb-foot').textContent = d.period === 'week' ? `This week's top 3 by Top haul win ${d.prizes.join(' / ')} AX and wear a crown 👑 all next week. Ends in ${mmss(d.ends - Date.now())}.` : d.period === 'day' ? `Today's boards reset in ${mmss(d.ends - Date.now())}. Weekly winners get AX and a crown.` : 'All-time records. Every green fish counts: real fish are verified on Lighter.';
+  }
+  // whale sightings: when a market jumps, the zone it lives in lights up and its fish bite more for two minutes
+  const PX_HIST = new Map(); S.whale = null; S.lastWhale = 0;
+  function sampleWhales() {
+    const now = Date.now();
+    for (const m of MK_IDS) { const px = venue.price(m); if (!(px > 0)) continue; const h = PX_HIST.get(m) || []; h.push([now, px]); while (h.length && now - h[0][0] > 75e3) h.shift(); PX_HIST.set(m, h); }
+    if (S.whale && now > S.whale.until) S.whale = null;
+    if (S.whale || now - S.lastWhale < 4 * 60e3) return;
+    let best = null;
+    for (const [m, h] of PX_HIST) { if (h.length < 6 || now - h[0][0] < 55e3) continue; const chg = h[h.length - 1][1] / h[0][1] - 1; if (Math.abs(chg) >= 0.006 && (!best || Math.abs(chg) > Math.abs(best.chg))) best = { m, chg }; }
+    if (!best) return;
+    const zone = ZONES.find(z => !z.practice && z.mk.includes(best.m) && z.mk.length < 40) || ZONES.find(z => !z.practice && z.mk.includes(best.m)); if (!zone) return;
+    S.whale = { mk: best.m, zone, chg: best.chg, until: now + 120e3 }; S.lastWhale = now;
+    zoneBanner('🐋 WHALE SIGHTING', `${MARKETS[best.m].name} just moved ${fmtPct(best.chg)} · ${zone.name}`, '#7fe8ff');
+    if (!S.zone || S.zone !== zone) S.goTo = zone;
+  }
+  // Kraken watch: when several boats around you are deep in the red, the sky turns
+  function krakenWatch() {
+    let deep = 0; const p = activePos(); if (p && pnlFrac(p) < -0.3) deep++;
+    for (const e of peers.values()) { const pr = e.presence || {}; if (pr.st === 'fight' && +pr.pnl < -0.3) deep++; }
+    if (!peers.size) for (const b of S.bots) if (b.mode === 'fish' && b.pnl < -0.2) deep++;
+    const on = deep >= 3;
+    if (on && !S.krakenWatch) zoneBanner('🦑 KRAKEN WATCH', `${deep} lines are deep in the red out here. Keep your knife sharp.`, '#c49bff');
+    S.krakenWatch = on; S.watchDark = on ? 0.35 : 0;
   }
   function tickRound() {
-    const r = roundNow();
-    if (r.id !== S.round.id) { endRound(); S.round = { id: r.id, score: 0, crown: S.round.crown }; S.bots.forEach(b => { b.rs = 0; }); }
     const fz = frenzyNow();
     if (fz !== S.frenzyZone && !S.showcase) { S.frenzyZone = fz; if (fz) { zoneBanner(`FRENZY: ${fz.name}!`, 'fast bites · 3× shiny · 2× XP', '#ffd23f'); SFX.level(); buzz([30, 30, 30]); } }
-    renderRound();
-  }
-  function endRound() {
-    const rows = roundRows(); if (!rows.some(x => x.sc !== 0)) return;
-    const meI = rows.findIndex(x => x.me), boatArt = k => (BOATS.find(b => b.id === k) || BOATS[0]).art;
-    $('#pd-steps').innerHTML = rows.slice(0, 3).map((x, i) => `<div class="step s${i + 1}">${img(boatArt(x.b))}<b>${esc(x.name)}${i === 0 ? ' 👑' : ''}</b><small class="${x.sc >= 0 ? 'up' : 'down'}">${fmtPct(x.sc)}</small><div class="block">${i + 1}</div></div>`).join('');
-    const xp = [100, 60, 40][meI] || (S.round.score !== 0 ? 15 : 0);
-    $('#pd-you').textContent = `You finished #${meI + 1} of ${rows.length} with ${fmtPct(S.round.score)}${xp ? ` · +${xp} XP` : ''}${meI === 0 ? ' · you wear the crown next round' : ''}`;
-    if (xp) addXp(xp); S.round.crown = meI === 0; if (meI < 3 && S.round.score > 0) quest('podium', 1);
-    if (S.mode === 'fight' || S.mode === 'kraken' || S.mode === 'pull') {   // never yank you out of a live fight: a banner instead of the podium
-      zoneBanner(meI === 0 ? 'You won the round! 👑' : `Round over · #${meI + 1} of ${rows.length}`, `${fmtPct(S.round.score)}${xp ? ` · +${xp} XP` : ''}`, meI === 0 ? '#ffd23f' : '#9ad8ee'); return; }
-    $('#o-podium').hidden = false; SFX.level(); if (meI === 0) { confetti(ME.x, ME.z); rayBurst(new THREE.Vector3(ME.x, 3, ME.z), '#ffd23f', 2.2, 18); }
+    if (ACC.online && Date.now() - LB.at > 30e3) fetchPill();
+    sampleWhales(); krakenWatch(); renderRound();
   }
   // objective tracker: the guided first catch, then frenzy and collection goals
   const TUT = [
@@ -2103,6 +2133,7 @@
   function objective() {
     const step = SAVE.tut ?? 9;
     if (step < TUT.length) { const o = TUT[step]; return { st: `${step + 1}/${TUT.length}`, t: o.t, zone: o.zone ? ZONES.find(z => z.id === o.zone) : null, color: '#ffd23f' }; }
+    if (S.whale && S.zone !== S.whale.zone) return { st: 'WHALE', t: `${MARKETS[S.whale.mk].name} is jumping in ${S.whale.zone.name}`, zone: S.whale.zone, color: '#7fe8ff' };
     const fz = frenzyNow(); if (fz && S.zone !== fz) return { st: 'FRENZY', t: `Race to ${fz.name}: fast bites, 3× shiny`, zone: fz, color: '#ffd23f' };
     if (S.mode === 'fight') { const p = activePos(), f = p ? pnlFrac(p) : 0; return { st: 'FIGHT', t: f >= PULL_MIN ? 'It\'s green: pull it in, or hold for more' : f < -0.12 ? 'It\'s dragging you: cut it before the Kraken' : 'Watch it: past +2% you can pull it in', color: f >= PULL_MIN ? '#3ddc97' : f < 0 ? '#ff5c7a' : '#5fb4ff' }; }
     if (!S.zone) { const seen = MK_IDS.filter(m => SAVE.dex[m]).length, g = S.goTo || null; return { st: `${seen}/${MK_IDS.length}`, t: g ? `Sail to ${g.name}` : 'Drive into a glowing zone to fish', zone: g, color: '#5fb4ff' }; }
@@ -2352,7 +2383,7 @@
     if (!room) return;
     const p = activePos(), f = p ? pnlFrac(p) : 0;
     const fishP = S.fishObj ? S.fishObj.position : null;
-    room.presence({ rid: S.round.id, rs: +S.round.score.toFixed(4), cr: S.round.crown ? 1 : 0, em: ME.em || null, zn: S.zone ? S.zone.id : null, b: SAVE.eq.boat, x: +ME.x.toFixed(1), z: +ME.z.toFixed(1), h: +ME.h.toFixed(2), v: +ME.v.toFixed(1), c: SAVE.coat || ME.color, n: ME.nick, st: S.mode, mk: p ? p.market : null, sd: p ? p.side : 0, lv: p ? p.leverage : 0, pnl: +f.toFixed(4), fx: fishP ? +fishP.x.toFixed(1) : null, fz: fishP ? +fishP.z.toFixed(1) : null, ses: +S.session.toFixed(2), vo: S.lastSay && Date.now() - S.lastSay.t < 4000 ? S.lastSay : null, sk: +(S.sink || 0).toFixed(2), ev: S.lastEv || null }).catch(() => { });
+    room.presence({ cr: ACC.crown ? 1 : 0, em: ME.em || null, zn: S.zone ? S.zone.id : null, b: SAVE.eq.boat, x: +ME.x.toFixed(1), z: +ME.z.toFixed(1), h: +ME.h.toFixed(2), v: +ME.v.toFixed(1), c: SAVE.coat || ME.color, n: ME.nick, st: S.mode, mk: p ? p.market : null, sd: p ? p.side : 0, lv: p ? p.leverage : 0, pnl: +f.toFixed(4), fx: fishP ? +fishP.x.toFixed(1) : null, fz: fishP ? +fishP.z.toFixed(1) : null, ses: +S.session.toFixed(2), vo: S.lastSay && Date.now() - S.lastSay.t < 4000 ? S.lastSay : null, sk: +(S.sink || 0).toFixed(2), ev: S.lastEv || null }).catch(() => { });
   }
   // standalone multiplayer: the HookLine server (hookline/server) speaks the same presence shape as claude.ai rooms
   // ?mp= or window.HOOKLINE_MP, else the server this page came from (the HookLine server serves both)
@@ -2530,7 +2561,7 @@
     const zn = zoneAt(ME.x, ME.z); S.lake = zn;
     let spec;
     if (S.target && SAVE.sonar >= 1 && S.target.zone === zn) spec = { ...S.target.spec };
-    else { const pool = realMode() && !zn.practice ? zn.mk.filter(m => (!venue.broker.markets || venue.broker.markets.has(m)) && !S.positions.some(p => p.real && p.market === m)) : zn.mk; const mk = S.lure && pool.includes(S.lure) && Math.random() < 0.7 ? S.lure : weightedPick(pool.length ? pool : zn.mk); spec = { market: mk, side: Math.random() < 0.5 ? 1 : -1, shiny: Math.random() < (S.perfect ? 0.2 : 0.06) * (zn === S.frenzyZone ? 3 : 1) * (S.lucky ? 3 : 1) }; S.lucky = false; }
+    else { const pool = realMode() && !zn.practice ? zn.mk.filter(m => (!venue.broker.markets || venue.broker.markets.has(m)) && !S.positions.some(p => p.real && p.market === m)) : zn.mk; const mk = S.lure && pool.includes(S.lure) && Math.random() < 0.7 ? S.lure : S.whale && S.whale.zone === zn && pool.includes(S.whale.mk) && Math.random() < 0.6 ? S.whale.mk : weightedPick(pool.length ? pool : zn.mk); spec = { market: mk, side: Math.random() < 0.5 ? 1 : -1, shiny: Math.random() < (S.perfect ? 0.2 : 0.06) * (zn === S.frenzyZone ? 3 : 1) * (S.lucky ? 3 : 1) }; S.lucky = false; }
     const ub = SAVE.baitEq && SAVE.baits[SAVE.baitEq] > 0 ? econ('useBait') : null, bt0 = ub && ub.ok ? ub.out.id : null;
     if (bt0) { spec.bait = bt0; if (bt0 === 'glitter' && !spec.shiny && Math.random() < 0.22) spec.shiny = true; if (!SAVE.baits[bt0]) { toast(`Last ${BAITS.find(b => b.id === bt0).name} on the hook. Craft more in the Market.`); } persist(); }
     if (S.perfect) addXp(10); S.perfect = false;
@@ -2661,7 +2692,6 @@
     S.positions = [...venue.positions.values()];
     const p = res.pos, m = S.meta[p.id] || {}, mk = MARKETS[p.market], pct = res.pnl / (p.margin * res.fraction);
     if (p.practice) SAVE.paper += res.returned; else { if (!p.real) SAVE.usd += res.returned; S.session += res.pnl; }
-    if (res.fraction >= 1 || res.reason !== 'stop') roundScore(pct * res.fraction);
     if (p.id === S.active || res.fraction >= 1) tutAdvance(3);
     const isActive = p.id === S.active && res.fraction >= 1;
     if (p.real) track('real_trade');
@@ -2686,7 +2716,7 @@
       if (!p.practice || true) { S.streak = win ? (S.streak || 0) + 1 : 0; if (win && S.streak >= 2) { addXp(10 * S.streak); setTimeout(() => zoneBanner(`${S.streak} WIN STREAK!`, `+${10 * S.streak} bonus XP`, '#3ddc97'), 900); } }
       if (isActive && S.mode !== 'pull') { S.mode = 'pull'; S.mt = 0; S.pullFrom = S.fishObj ? S.fishObj.position.clone() : null; }
       if (isActive) say(win ? 'win' : 'cut', true);
-      if (win) { track('catch'); quest('win', 1); SFX.win(); buzz([20, 40, 20, 40, 60]); } else SFX.escape();
+      if (win) { track('catch'); quest('win', 1); if (res.pnl > 0) quest('haul', res.pnl / 5); setTimeout(fetchPill, 2500); SFX.win(); buzz([20, 40, 20, 40, 60]); } else SFX.escape();
       S.lastEv = { k: win ? 'win' : 'rel', mk: p.market, pnl: +res.pnl.toFixed(2), t: Date.now() };
       const title = res.reason === 'take-profit' ? 'NETTED!' : res.reason === 'pulled' ? 'Pulled in!' : win ? 'Released a winner' : 'Released';
       pop(mk.fish, title, `${p.market} ${fmtSigned(res.pnl)} (${fmtPct(pct)}) · ${fmtUSD(res.returned)} back`, win ? 'win' : 'lose');
@@ -3127,7 +3157,7 @@
     } else if (S.mode === 'fight' && f >= PULL_MIN) tag('me-warn', 'warn good', `<span class="shout good">${f > 0.3 ? 'Big one! Pull!' : 'Pull it in!'}</span>`, head);
     if (S.mode === 'fight' && p && S.fishObj) tag('me-fish', 'fishtag ' + (f >= 0 ? 'up' : 'down'), `${esc(MARKETS[p.market].name)} · ${esc(p.market)} ${p.side > 0 ? 'L' : 'S'} ${p.leverage}× · ${fmtPct(f)}`, S.fishObj.position.clone().setY(0.6));
     if (S.bubble && (S.bubble.t += S.dt) < 2.8) tag('me-say', 'say', `<span>${esc(S.bubble.text)}</span>`, new THREE.Vector3(ME.x, 4.4, ME.z));
-    tag('me-name', 'name me', S.round.crown ? '👑 You' : 'You', new THREE.Vector3(ME.x, 3.6, ME.z));
+    tag('me-name', 'name me', ACC.crown ? '👑 You' : 'You', new THREE.Vector3(ME.x, 3.6, ME.z));
     if ((S.mode === 'fight' && (f < -0.03 || f >= PULL_MIN)) || S.mode === 'kraken') tagEls.get('me-name').style.display = 'none';
     // sonar labels
     if (SAVE.sonar >= 1 && S.mode === 'idle') for (const zn of ZONES) if (S.zone === zn) zn.shadows.forEach((sh, i) => {
@@ -3234,6 +3264,7 @@
     if (has3D && S.ready) {
       waterUniforms.uTime.value = S.time;
       if (!S.hintGone && (S.time > 25 || SAVE.hintSeen)) { S.hintGone = true; SAVE.hintSeen = true; $('#drive-hint').classList.add('gone'); }
+      if (!S.krakenAt) GRADE.dark = lerp(GRADE.dark, S.watchDark || 0, Math.min(1, dt * 0.6));
       updateDrive(dt); updateSink(dt); towAudio(dt); fightVoice(); updateHop(dt); updateCharge(dt); animateFish(S.time); updateWaypoint(dt); updateRings(dt); updateBottles(dt); updateDolphins(dt); updateSchools(dt); musicTick();
       placeBoat(S.me, ME.x, ME.z, ME.h, ME.v, S.time);
       updateFishing(dt); updateShadows(dt); updateBots(dt); updatePeers(dt); updateKraken(dt); updateFx(dt); updateCamera(dt);
@@ -3769,6 +3800,7 @@
       if (m.k === 'sold') { toast(`💰 ${m.buyer} bought ${m.qty}× ${b.name} from you: +${m.ax} AX`, 'good'); SFX.coin(); }
       else if (m.k === 'expired') toast(`Your ${b.name} listing ended unsold. ${m.qty} back in your bag.`);
       else if (m.k === 'removed') toast(`A moderator took down your ${b.name} listing. ${m.qty} back in your bag.`);
+      else if (m.k === 'crown') { toast(`👑 You finished #${m.place} on last week's Top haul board: +${m.ax} AX and a crown for this week!`, 'good'); SFX.level(); ACC.crown = m.place; }
       else if (m.k === 'ref') { toast(`🎉 ${m.who} joined with your link and finished the tutorial: +${m.ax} AX and a Golden Grub!`, 'good'); SFX.coin(); }
       else if (m.k === 'refjoin') { toast(`🎉 Tutorial done! ${m.who} invited you: +${m.ax} AX`, 'good'); SFX.coin(); } }
     if ((r.inbox || []).length) { renderAll(); $('#mk-dot').hidden = S.tab === 'market'; }
@@ -3918,8 +3950,10 @@
   $('#quests').addEventListener('click', e => { const b = e.target.closest('[data-claim]'); if (b) claim(b.dataset.claim); });
   $('#lake-list').addEventListener('click', e => { const b = e.target.closest('[data-lake]'); if (b) switchLake(+b.dataset.lake); });
   $('#ht-tut').addEventListener('click', () => { SAVE.tut = 0; persist(); $('#o-howto').hidden = true; setTab('lake'); });
-  $('#pd-close').addEventListener('click', () => { $('#o-podium').hidden = true; });
-  $('#roundbox').addEventListener('click', () => { const rb = $('#roundbox'); if (W < 481 && rb.classList.contains('mini')) { rb.classList.remove('mini'); clearTimeout(rb._t); rb._t = setTimeout(() => rb.classList.add('mini'), 6000); return; } renderPlayers(); $('#o-players').hidden = false; });
+  $('#lb-period').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) { LB.period = b.dataset.p; openBoard(); } });
+  $('#lb-board').addEventListener('click', e => { const b = e.target.closest('[data-b]'); if (b) { LB.board = b.dataset.b; openBoard(); } });
+  $('#lb-crew').addEventListener('click', () => { $('#o-board').hidden = true; renderPlayers(); $('#o-players').hidden = false; });
+  $('#roundbox').addEventListener('click', () => openBoard());
   $('#kitbar').addEventListener('click', () => { const k = $('#kit'), open = k.hidden; k.hidden = !open; $('#kitbar').setAttribute('aria-expanded', String(open)); showPanel($('#fight').hidden ? 'main' : 'fight'); });
   $('#emote-pick').innerHTML = EMOTES.map((e, i) => `<button type="button" data-em="${i}" aria-label="Emote ${i + 1}">${e}</button>`).join('');
   $('#emote-btn').addEventListener('click', () => { $('#emote-pick').hidden = !$('#emote-pick').hidden; });
@@ -3967,7 +4001,7 @@
   $('#sail-next').addEventListener('click', () => { sailIdx = (sailIdx + 1) % BOATS.length; SFX.tone(760, 0.05, 'square', 0.08); renderSail(); });
   $('#sail-colors').addEventListener('click', e => { const b = e.target.closest('[data-coat]'); if (!b) return; SAVE.coat = b.dataset.coat; persist(); const k = S.me.kind; scene.remove(S.me.group); scene.remove(S.me.wake.m); S.me = makeBoat(SAVE.coat, null, k); renderSail(); });
   $('#sail-go').addEventListener('click', () => { track('sail'); const b = BOATS[sailIdx]; if (!SAVE.owned[b.id]) { if (!econ('buy', { slot: 'boat', id: b.id }).ok) return; SFX.coin(); persist(); renderAll(); renderSail(); return; } closeSail(); });
-  window.HookLineDebug = { S, ME, ACC, PM, Q, cam: camera, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; camera.position.set(x, 14, z + 14); S.camLook = null; }, endRound: () => endRound(), skipOnboarding: () => { SAVE.onboarded = true; persist(); showOnboarding(false); }, mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
+  window.HookLineDebug = { S, ME, ACC, PM, Q, cam: camera, SAVE: () => SAVE, venue, peers, move: (m, f) => { venue.nudge(m, f); }, cast: (pw) => castLine(pw), pull: pullIn, cut: cutLine, active: () => activePos(), pnl: () => activePos() && pnlFrac(activePos()), goto: (x, z) => { ME.x = x; ME.z = z; ME.v = 0; ME.vx = 0; ME.vz = 0; camera.position.set(x, 14, z + 14); S.camLook = null; }, board: () => openBoard(), skipOnboarding: () => { SAVE.onboarded = true; persist(); showOnboarding(false); }, mp: () => ({ room: !!room, standalone: !!(room && room.standalone), url: MP_URL }) };
 
   /* boot */
   (async () => {
