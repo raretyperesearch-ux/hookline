@@ -78,7 +78,7 @@ const server = http.createServer((req, res) => {
     accounts.handle(req, res, url).then(done => { if (!done) sendJson(res, 404, { ok: false, error: 'not found' }); });
     return;
   }
-  if (req.url === '/health') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: [...rooms.values()].reduce((n, r) => n + r.size, 0), ...accounts.stats() })); return; }
+  if (req.url === '/health') { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: [...rooms.values()].reduce((n, r) => n + r.size, 0), roomSizes: [...rooms.values()].map(r => r.size), netKBs: +(NET.rate || 0).toFixed(1), cpu: +(NET.cpu || 0).toFixed(1), memMB: Math.round(process.memoryUsage().rss / 1048576), ...accounts.stats() })); return; }
   // public runtime config for the page (the Privy app ID is public by design; secrets never go here)
   if (req.url === '/config.js') {
     const cfg = { HOOKLINE_PRIVY_APP_ID: process.env.PRIVY_APP_ID || '', HOOKLINE_PRIVY_CLIENT_ID: process.env.PRIVY_CLIENT_ID || '', HOOKLINE_LIGHTER_NET: process.env.LIGHTER_NET || 'testnet', HOOKLINE_ECONOMY_MODE: accounts.MODE };
@@ -102,27 +102,49 @@ wss.on('connection', (ws, req) => {
   const url = new URL(req.url, 'http://x');
   const room = pickRoom(url.searchParams.get('room'));
   if (!rooms.has(room)) rooms.set(room, new Set());
-  const c = { ws, id: 'p' + (seq++), room, presence: null, last: 0, tokens: 20 };
-  rooms.get(room).add(c);
+  const v2 = url.searchParams.get('v') === '2';
+  const c = { ws, id: 'p' + (seq++), room, presence: null, sent: {}, dirty: false, v2, last: 0, tokens: 20 };
+  const r0 = rooms.get(room); r0.add(c);
   ws.send(JSON.stringify({ t: 'hello', id: c.id, room }));
+  // v2 clients get one full snapshot now, then only what changes
+  if (v2) ws.send(JSON.stringify({ t: 'snap', you: c.id, peers: [...r0].filter(o => o.presence && o !== c).map(o => [o.id, o.presence]) }));
   ws.on('message', buf => {
     const now = Date.now(); c.tokens = Math.min(20, c.tokens + (now - c.last) / 50); c.last = now;
     if (c.tokens < 1) return; c.tokens -= 1;               // ~20 msgs/s per player
     if (buf.length > 4096) return;
     let m; try { m = JSON.parse(buf); } catch { return; }
-    if (m && m.t === 'presence' && m.p && typeof m.p === 'object') c.presence = m.p;
+    if (m && m.t === 'presence' && m.p && typeof m.p === 'object') { c.presence = m.p; c.dirty = true; }
   });
   ws.isAlive = true; ws.on('pong', () => { ws.isAlive = true; });
-  ws.on('close', () => { const r = rooms.get(c.room); if (r) { r.delete(c); if (!r.size) rooms.delete(c.room); } });
+  ws.on('close', () => { const r = rooms.get(c.room); if (r) { r.delete(c); if (c.presence) (gone.get(c.room) || gone.set(c.room, []).get(c.room)).push(c.id); if (!r.size) { rooms.delete(c.room); gone.delete(c.room); } } });
 });
 
-// broadcast each room's peers (everyone's latest presence) to everyone in it
+// broadcast, 10 times a second. v2 clients: one shared message per room carrying only the fields that changed
+// since the last tick ({t:'d', d:[[id, {changed keys}]], g:[ids that left]}); a key set to null was removed.
+// Older pages (no ?v=2) still get the full list each tick.
+const gone = new Map();   // room -> ids that left since the last tick
+const same = (a, b) => a === b || (a && b && typeof a === 'object' && typeof b === 'object' && JSON.stringify(a) === JSON.stringify(b));
+const NET = { ticks: 0, bytes: 0, msgs: 0 };
 setInterval(() => {
-  for (const r of rooms.values()) {
-    const peers = [...r].filter(c => c.presence).map(c => ({ peer: c.id, presence: c.presence }));
-    for (const c of r) if (c.ws.readyState === 1) c.ws.send(JSON.stringify({ t: 'peers', you: c.id, peers }));
+  for (const [name, r] of rooms) {
+    const d = [], left = gone.get(name) || [];
+    for (const c of r) {
+      if (!c.dirty || !c.presence) continue; c.dirty = false;
+      const diff = {}; let any = false;
+      for (const k in c.presence) if (!same(c.presence[k], c.sent[k])) { diff[k] = c.presence[k]; any = true; }
+      for (const k in c.sent) if (!(k in c.presence)) { diff[k] = null; any = true; }
+      if (any) { d.push([c.id, diff]); c.sent = { ...c.presence }; }
+    }
+    gone.delete(name);
+    let msg = null, legacy = null;
+    for (const c of r) {
+      if (c.ws.readyState !== 1) continue;
+      if (c.v2) { if (!d.length && !left.length) continue; msg = msg || JSON.stringify({ t: 'd', d, g: left.length ? left : undefined }); c.ws.send(msg); NET.bytes += msg.length; NET.msgs++; }
+      else { legacy = legacy || [...r].filter(o => o.presence).map(o => ({ peer: o.id, presence: o.presence })); const s = JSON.stringify({ t: 'peers', you: c.id, peers: legacy }); c.ws.send(s); NET.bytes += s.length; NET.msgs++; }
+    }
   }
-}, 66);
+  if (++NET.ticks % 50 === 0) { NET.rate = NET.bytes / 5 / 1024; NET.bytes = 0; const u = process.cpuUsage(), t = Date.now(); if (NET.cu) NET.cpu = ((u.user + u.system - NET.cu) / 1000) / (t - NET.ct) * 100; NET.cu = u.user + u.system; NET.ct = t; }
+}, 100);
 
 // keep-alive: ping every 20s, drop sockets that stopped answering
 setInterval(() => { for (const r of rooms.values()) for (const c of r) { if (!c.ws.isAlive) { c.ws.terminate(); continue; } c.ws.isAlive = false; try { c.ws.ping(); } catch (_) { } } }, 20000);

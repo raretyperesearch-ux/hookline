@@ -24,13 +24,18 @@ try { db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); } catch (_) { db = null
 if (!db || !db.accounts) db = { v: 1, accounts: {}, sessions: {}, privy: {}, treasury: null };
 if (!db.market) db.market = { listings: [], sales: [] };
 if (!db.treasury) db.treasury = { ax: +process.env.TREASURY_AX || 50000, in: 0, out: 0 };
-let saveT = null;
+let saveT = null, writing = false, again = false;
+// write the whole file at most every 1.5s, off the request path; a write in flight queues one more
 function save() {
   if (saveT) return;
   saveT = setTimeout(() => {
-    saveT = null; const tmp = DB_FILE + '.tmp';
-    try { fs.writeFileSync(tmp, JSON.stringify(db)); fs.renameSync(tmp, DB_FILE); } catch (e) { console.error('[accounts] save failed:', e.message); }
-  }, 400);
+    saveT = null; if (writing) { again = true; return; }
+    writing = true; const tmp = DB_FILE + '.tmp';
+    fs.writeFile(tmp, JSON.stringify(db), err => {
+      if (err) { console.error('[accounts] save failed:', err.message); writing = false; return; }
+      fs.rename(tmp, DB_FILE, err2 => { if (err2) console.error('[accounts] save failed:', err2.message); writing = false; if (again) { again = false; save(); } });
+    });
+  }, 1500);
 }
 function flush() { if (saveT) { clearTimeout(saveT); saveT = null; } try { fs.writeFileSync(DB_FILE + '.tmp', JSON.stringify(db)); fs.renameSync(DB_FILE + '.tmp', DB_FILE); } catch (_) { } }
 process.on('SIGTERM', () => { flush(); process.exit(0); });
@@ -194,7 +199,7 @@ async function handle(req, res, url) {
     if (p === '/api/session' && method === 'POST') {
       const body = await readBody(req); const have = authed(req);
       if (have) return sendJson(res, 200, { ok: true, account: view(have), treasury: publicTreasury() }), true;
-      if (!allow('guest:' + clientIp(req), 30, 30 / 3600)) return sendJson(res, 429, { ok: false, error: 'too many new accounts from this network, try again later' }), true;
+      if (!allow('guest:' + clientIp(req), 60, 60 / 3600)) return sendJson(res, 429, { ok: false, error: 'too many new accounts from this network, try again later' }), true;
       const acc = createAccount('guest', { econ: importEcon(body.import), profile: cleanProfile(body.profile) });
       acc.nick = cleanNick(acc.profile.nick); acc.coat = cleanCoat(acc.profile.coat);
       const token = newSession(acc); ledger({ acc: acc.id, a: 'create', ax: acc.econ.ax });
